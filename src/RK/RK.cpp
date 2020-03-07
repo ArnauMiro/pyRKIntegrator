@@ -7,6 +7,16 @@
 	The function to call is ODERK, a generic Runge-Kutta variable step integrator.
 
 	The inputs of this function are:
+		> scheme: Runge-Kutta scheme to use. Options are:
+			* Euler-Heun 1(2) (eulerheun12)
+			* Bogacki-Shampine 2(3) (bogackishampine23)
+			* Fehlberg 4(5) (fehlberg45)
+			* Cash-Carp 4(5) (cashcarp45)
+			* Dormand-Prince 4-5 (dormandprince45)
+			* Calvo 5(6) (calvo56)
+			* Dormand-Prince 7(8) (dormandprince78)
+			* Curtis 8(10) (curtis810)
+			* Hiroshi 9(12) (hiroshi912)
 		> odefun: a function so that
 			dydx = odefun(x,y,n)
 		where n is the number of y variables to integrate.
@@ -16,36 +26,33 @@
 
 		An additional parameter can be passed to the integrator, which contains
 		parameters for the integrator:
-			> h0:     Initial step for the interval
-			> eps:    Tolerance to meet.
-			> scheme: Runge-Kutta scheme to use. Options are:
-				* Euler-Heun 1(2) (eulerheun12)
-				* Bogacki-Shampine 2(3) (bogackishampine23)
-				* Fehlberg 4(5) (fehlberg45)
-				* Cash-Karp 4(5) (cashkarp45)
-				* Dormand-Prince 4-5 (dormandprince45)
-				* Calvo 5(6) (calvo56)
-				* Dormand-Prince 7(8) (dormandprince78)
-				* Curtis 8(10) (curtis810)
-				* Hiroshi 9(12) (hiroshi912)
-			> eventfcn: Event function.
+			> h0:       Initial step for the interval
+			> hmin:      Minimum interval allowed
+			> eps:       Tolerance to meet.
+			> eventfcn:  Event function.
 			> outputfcn: Output function.
+
+	If the inputted tolerance is not met, the intergrator will use hmin and will
+	produce a successful step. Warning! Accuracy might be compromised.
 
 	The function will return a structure containing the following information:
 		> retval: Return value. Will be negative in case of errors or positive if successful.
 			* 1: indicates a successful run.
+			* 2: indicates that at a certain point hmin was used for the step.
 		> n: Number of steps taken.
 		> err: Maximum error achieved.
 		> x: solution x values of size n.
 		> y: solution y values of size n per each variable.
 
 	Arnau Miro, 2018
+	Last rev: 2020
 */
 
 #include <cstdlib>
 #include <cstdio>
 #include <cmath>
 #include <cstring>
+
 #include <limits>
 #include <string>
 #include <vector>
@@ -54,12 +61,14 @@
 
 #define NNSTEP 1000
 
+
 /*
 	ODERK
 
 	A generic Runge-Kutta variable step integrator.
 
 	Inputs:
+		> scheme: Runge-Kutta scheme to use
 		> odefun: must be a function so that dydx = odefun(x,y,n)
 		  and n is the number of derivatives to compute.
 		> xspan: integration start and end point.
@@ -69,20 +78,19 @@
 	Outputs:
 		> RK_OUT structure containing the exit code and the solution.
 */
-extern "C" RK_OUT odeRK(void (*odefun)(double,double*,int,double*),
-	double xspan[2], double y0[], const int n, RK_PARAM rkp) {
+extern "C" RK_OUT odeRK(const char *scheme, void (*odefun)(double,double*,int,double*),
+	double xspan[2], double y0[], const int n, const RK_PARAM *rkp) {
 
 	RK_OUT rko;
 
-	const double secfact = 0.9, secfact_max = 5., secfact_min = 0.2;
-	const double hmin = fabs(xspan[1]-xspan[0])*rkp.minstep;
+	const double hmin = fabs(xspan[1]-xspan[0])*rkp->minstep;
 
 	// Select Runge-Kutta method
-	RKMethod rkm(rkp.scheme);
+	RKMethod rkm(str2RKS(scheme));
 
 	// Initialization
 	int cont   = 1, last = 0;
-	double h   = rkp.h0;
+	double h   = rkp->h0;
 	rko.retval = 0;
 
 	// Create temporary arrays to store the output
@@ -95,16 +103,16 @@ extern "C" RK_OUT odeRK(void (*odefun)(double,double*,int,double*),
 
 	// Check tableau
 	#ifdef RK_CHECK_TABLEAU
-	printf("Checking tableau for %s...",rkp.scheme);
+	printf("Checking tableau for %s...",scheme);
 	if (!rkm.CheckTableau()) {cont = 0;rko.retval = -1;}
 	#endif
 
 	// Check for event functions
 	int dir[1], hasEventF = 0;
 	double val[1], g_ant = 0.;
-	if (rkp.eventfcn) {
+	if (rkp->eventfcn) {
 		// Evaluate the event function once
-		int ccont = rkp.eventfcn(xspan[0],y0,n,val,dir);
+		int ccont = rkp->eventfcn(xspan[0],y0,n,val,dir);
 		hasEventF = (ccont == -10) ? 0 : 1;
 	}
 
@@ -165,12 +173,12 @@ extern "C" RK_OUT odeRK(void (*odefun)(double,double*,int,double*),
 		// Source: Ketcheson, David, and Umair bin Waheed. 
 		//         "A comparison of high-order explicit Runge–Kutta, extrapolation, and deferred correction methods in serial and parallel." 
 		//         Communications in Applied Mathematics and Computational Science 9.2 (2014): 175-200.
-		double hest = secfact * h * std::pow(rkp.eps/error,0.7/rkm.alpha);
+		double hest = rkp->secfact * h * std::pow(rkp->eps/error,0.7/rkm.alpha);
 
 		// Event function
 		if (hasEventF) {
 			// Run event function
-			int ccont = rkp.eventfcn(x[rko.n],yhigh,n,val,dir);
+			int ccont = rkp->eventfcn(x[rko.n],yhigh,n,val,dir);
 			// Naive approximation to a root finding algorithm
 			// using a crude mid-point rule
 			if (rko.n != 0 && val[0]*g_ant < 0) {
@@ -178,11 +186,11 @@ extern "C" RK_OUT odeRK(void (*odefun)(double,double*,int,double*),
 			}
 			// Update continue according to the output of the
 			// event function
-			cont  = (fabs(val[0]) < rkp.epsevf) ? ccont : cont;
-			g_ant = (fabs(val[0]) < rkp.epsevf) ? 0 : val[0]; // Also restart g_ant
+			cont  = (fabs(val[0]) < rkp->epsevf) ? ccont : cont;
+			g_ant = (fabs(val[0]) < rkp->epsevf) ? 0 : val[0]; // Also restart g_ant
 		}
 
-		if (error < rkp.eps || last) {
+		if (error < rkp->eps || last) {
 
 			// This is a successful step
 			rko.retval = (rko.retval <= 0) ? 1 : rko.retval;
@@ -201,14 +209,14 @@ extern "C" RK_OUT odeRK(void (*odefun)(double,double*,int,double*),
 			std::memcpy(y.data()+n*rko.n,yhigh,n*sizeof(double));
 
 			// Output function
-			if (rkp.outputfcn)
-				cont = (cont == 1) ? rkp.outputfcn(x[rko.n-1],yhigh,n) : 0;
+			if (rkp->outputfcn)
+				cont = (cont == 1) ? rkp->outputfcn(x[rko.n-1],yhigh,n) : 0;
 
 			// Set the new step
 			// Source: Ketcheson, David, and Umair bin Waheed. 
 			//         "A comparison of high-order explicit Runge–Kutta, extrapolation, and deferred correction methods in serial and parallel." 
 			//         Communications in Applied Mathematics and Computational Science 9.2 (2014): 175-200.
-			h = fmin(secfact_max*h,fmax(secfact_min*h,hest));
+			h = fmin(rkp->secfact_max*h,fmax(rkp->secfact_min*h,hest));
 			//h = fmax(h,hest);
 		} else {
 			// This is a failed step
@@ -224,7 +232,7 @@ extern "C" RK_OUT odeRK(void (*odefun)(double,double*,int,double*),
 	// Allocate memory to output structure and copy the data
 	rko.x  = new double[rko.n+1];     std::memcpy(rko.x,x.data(),(rko.n+1)*sizeof(double));
 	rko.y  = new double[n*(rko.n+1)]; std::memcpy(rko.y,y.data(),n*(rko.n+1)*sizeof(double));
-	rko.dy = new double[1];
+	rko.dy = new double[1]();
 
 	return rko;
 }
@@ -235,6 +243,7 @@ extern "C" RK_OUT odeRK(void (*odefun)(double,double*,int,double*),
 	A generic Runge-Kutta-Nystrom variable step integrator.
 
 	Inputs:
+		> scheme: Runge-Kutta scheme to use
 		> odefun: must be a function so that dydx = odefun(x,y,n)
 		  and n is the number of derivatives to compute.
 		> xspan: integration start and end point.
@@ -245,20 +254,19 @@ extern "C" RK_OUT odeRK(void (*odefun)(double,double*,int,double*),
 	Outputs:
 		> RK_OUT structure containing the exit code and the solution.
 */
-extern "C" RK_OUT odeRKN(void (*odefun)(double,double*,int,double*),
-	double xspan[2], double y0[], double dy0[], const int n, RK_PARAM rkp) {
+extern "C" RK_OUT odeRKN(const char *scheme, void (*odefun)(double,double*,int,double*),
+	double xspan[2], double y0[], double dy0[], const int n, const RK_PARAM *rkp) {
 
 	RK_OUT rko;
 
-	const double secfact = 0.9, secfact_max = 5., secfact_min = 0.2;
-	const double hmin = fabs(xspan[1]-xspan[0])*rkp.minstep;
+	const double hmin = fabs(xspan[1]-xspan[0])*rkp->minstep;
 
 	// Select Runge-Kutta method
-	RKMethod rkm(rkp.scheme);
+	RKMethod rkm(str2RKS(scheme));
 
 	// Initialization
 	int cont   = 1, last = 0;
-	double h   = rkp.h0;
+	double h   = rkp->h0;
 	rko.retval = 0;
 
 	// Create temporary arrays to store the output
@@ -273,9 +281,9 @@ extern "C" RK_OUT odeRKN(void (*odefun)(double,double*,int,double*),
 	// Check for event functions
 	int dir[1],    hasEventF = 0;
 	double val[1], g_ant = 0.;
-	if (rkp.eventfcn) {
+	if (rkp->eventfcn) {
 		// Evaluate the event function once
-		int ccont = rkp.eventfcn(xspan[0],y0,n,val,dir);
+		int ccont = rkp->eventfcn(xspan[0],y0,n,val,dir);
 		hasEventF = (ccont == -10) ? 0 : 1;
 	}
 
@@ -357,12 +365,12 @@ extern "C" RK_OUT odeRKN(void (*odefun)(double,double*,int,double*),
 		// Source: Ketcheson, David, and Umair bin Waheed. 
 		//         "A comparison of high-order explicit Runge–Kutta, extrapolation, and deferred correction methods in serial and parallel." 
 		//         Communications in Applied Mathematics and Computational Science 9.2 (2014): 175-200.
-		double hest = secfact * h * std::pow(rkp.eps/error,0.7/rkm.alpha);
+		double hest = rkp->secfact * h * std::pow(rkp->eps/error,0.7/rkm.alpha);
 
 		// Event function
 		if (hasEventF) {
 			// Run event function
-			int ccont = rkp.eventfcn(x[rko.n],yhigh,n,val,dir);
+			int ccont = rkp->eventfcn(x[rko.n],yhigh,n,val,dir);
 			// Naive approximation to a root finding algorithm
 			// using a crude mid-point rule
 			if (rko.n != 0 && val[0]*g_ant < 0) {
@@ -370,11 +378,11 @@ extern "C" RK_OUT odeRKN(void (*odefun)(double,double*,int,double*),
 			}
 			// Update continue according to the output of the
 			// event function
-			cont  = (fabs(val[0]) < rkp.epsevf) ? ccont : cont;
-			g_ant = (fabs(val[0]) < rkp.epsevf) ? 0 : val[0]; // Also restart g_ant
+			cont  = (fabs(val[0]) < rkp->epsevf) ? ccont : cont;
+			g_ant = (fabs(val[0]) < rkp->epsevf) ? 0 : val[0]; // Also restart g_ant
 		}
 
-		if (error < rkp.eps || last) {
+		if (error < rkp->eps || last) {
 			// This is a successful step
 			rko.retval = (rko.retval <= 0) ? 1 : rko.retval;
 			rko.err = (error > rko.err) ? error : rko.err;
@@ -394,14 +402,14 @@ extern "C" RK_OUT odeRKN(void (*odefun)(double,double*,int,double*),
 			std::memcpy(dy.data()+n*rko.n,dyhigh,n*sizeof(double));
 
 			// Output function
-			if (rkp.outputfcn)
-				cont = (cont == 1) ? rkp.outputfcn(x[rko.n-1],yhigh,n) : 0;
+			if (rkp->outputfcn)
+				cont = (cont == 1) ? rkp->outputfcn(x[rko.n-1],yhigh,n) : 0;
 
 			// Set the new step
 			// Source: Ketcheson, David, and Umair bin Waheed. 
 			//         "A comparison of high-order explicit Runge–Kutta, extrapolation, and deferred correction methods in serial and parallel." 
 			//         Communications in Applied Mathematics and Computational Science 9.2 (2014): 175-200.
-			h = fmin(secfact_max*h,fmax(secfact_min*h,hest));
+			h = fmin(rkp->secfact_max*h,fmax(rkp->secfact_min*h,hest));
 			//h = fmax(h,hest);
 		} else {
 			// This is a failed step
@@ -424,59 +432,13 @@ extern "C" RK_OUT odeRKN(void (*odefun)(double,double*,int,double*),
 
 
 /*
-	RKDEFAULTS
-
-	Default parameters for the RK_PARAM structure
-*/
-RK_PARAM rkdefaults(double xspan[2]){
-	RK_PARAM rkp;
-
-	// Initial and max step based on xspan
-	rkp.h0   = (xspan[1] - xspan[0])/10.;
-	// Tolerance
-	rkp.eps     = 1e-8;
-	rkp.epsevf  = 1e-4;
-	rkp.minstep = 1.e-12;
-	// Default scheme
-	std::sprintf(rkp.scheme,"dormandprince45");
-	// No event or output function
-	rkp.eventfcn  = NULL;
-	rkp.outputfcn = NULL;
-
-	return rkp;
-}
-
-RK_PARAM rkndefaults(double xspan[2]){
-	RK_PARAM rkp;
-
-	// Initial and max step based on xspan
-	rkp.h0   = (xspan[1] - xspan[0])/10.;
-	// Tolerance
-	rkp.eps     = 1e-8;
-	rkp.epsevf  = 1e-4;
-	rkp.minstep = 1.e-12;
-	// Default scheme
-	std::sprintf(rkp.scheme,"rkn68");
-	// No event or output function
-	rkp.eventfcn  = NULL;
-	rkp.outputfcn = NULL;
-
-	return rkp;
-}
-
-/*
 	CHECK TABLEAU
 
 	Checks for errors in the Butcher's tableau
 */
-extern "C" int check_tableau(RK_PARAM rkp) { RKMethod rkm(rkp.scheme); return rkm.CheckTableau(); }
+extern "C" int check_tableau(const RK_SCHEME rks) { RKMethod rkm(rks); return rkm.CheckTableau(); }
 
-/*
-	FREERKOUT
 
-	Frees pointers in the RK_OUT structure
-*/
-extern "C" void freerkout(RK_OUT rko) { delete[] rko.x; delete[] rko.y; delete[] rko.dy; }
 
 
 /*
@@ -484,45 +446,72 @@ extern "C" void freerkout(RK_OUT rko) { delete[] rko.x; delete[] rko.y; delete[]
 
 	Class constructor and destructor
 */
-RKMethod::RKMethod(const char scheme[]) {
-	/*
-		Selection of the Runge-Kutta method according
-		to the input scheme name
-	*/
-	if (std::string(scheme) == "eulerheun12")
-		this->EulerHeun12();
-	else if (std::string(scheme) == "bogackishampine23")
-		this->BogackiShampine23();
-	else if (std::string(scheme) == "dormandprince34a")
-		this->DormandPrince34A();
-	else if (std::string(scheme) == "fehlberg45")
-		this->Fehlberg45();
-	else if (std::string(scheme) == "cashkarp45")
-		this->CashKarp45();
-	else if (std::string(scheme) == "dormandprince45")
-		this->DormandPrince45();	
-	else if (std::string(scheme) == "dormandprince45a")
-		this->DormandPrince45A();
-	else if (std::string(scheme) == "calvo56")
-		this->Calvo56();
-	else if (std::string(scheme) == "dormandprince78")
-		this->DormandPrince78();
-	else if (std::string(scheme) == "curtis810")
-		this->Curtis810();
-	else if (std::string(scheme) == "hiroshi912")
-		this->Hiroshi912();
-	else if (std::string(scheme) == "rkn34")
-		this->RungeKuttaNystrom34();
-	else if (std::string(scheme) == "rkn46")
-		this->RungeKuttaNystrom46();
-	else if (std::string(scheme) == "rkn68")
-		this->RungeKuttaNystrom68();
-	else if (std::string(scheme) == "rkn1012")
-		this->RungeKuttaNystrom1012();
-	else
-		printf("Warning! Scheme <%s> not found\n",scheme);
+RKMethod::RKMethod(const RK_SCHEME rks) {
+	bool alloc = false;
+
+	// Selection of the Runge-Kutta method according 
+	// to the input scheme name
+	switch (rks) {
+		case EULERHEUN12:       
+			this->EulerHeun12();
+			break;
+		case BOGACKISHAMPINE23: 
+			this->BogackiShampine23();
+			break;
+		case DORMANDPRINCE34A:  
+			this->DormandPrince34A();
+			break;
+		case FEHLBERG45:        
+			this->Fehlberg45();
+			break;
+		case CASHKARP45:        
+			this->CashKarp45();
+			break;
+		case DORMANDPRINCE45:   
+			this->DormandPrince45();
+			break;
+		case DORMANDPRINCE45A:  
+			this->DormandPrince45A();
+			break;
+		case CALVO56:           
+			this->Calvo56();
+			break;
+		case DORMANDPRINCE78:   
+			this->DormandPrince78();
+			break;
+		case CURTIS810:         
+			this->Curtis810();
+			break;
+		case HIROSHI912:        
+			this->Hiroshi912();
+			break;
+		case RKN34:             
+			this->RungeKuttaNystrom34();
+			break;
+		case RKN46:             
+			this->RungeKuttaNystrom46();
+			break;
+		case RKN68:             
+			this->RungeKuttaNystrom68();
+			break;
+		case RKN1012:           
+			this->RungeKuttaNystrom1012();
+			break;
+		default:
+			std::printf("Warning! Scheme <%s> not found\n",RKS2str(rks));
+	}		
 }
-RKMethod::~RKMethod() {}
+
+RKMethod::~RKMethod() {
+	if (alloc) {
+		delete [] C;
+		delete [] A;
+		delete [] B;
+		delete [] Bhat;
+		delete [] Bp;
+		delete [] Bphat;
+	}
+}
 
 /*
 	EULERHEUN12
@@ -536,10 +525,14 @@ void RKMethod::EulerHeun12() {
 	this->alpha = 1.;
 
 	// Allocate Butcher's tableau
-	this->C.resize(this->nstep,0.);
-	this->A.resize(this->nstep*this->nstep,0.);
-	this->B.resize(this->nstep,0.);
-	this->Bhat.resize(this->nstep,0.);
+	this->C     = new double[this->nstep]();
+	this->A     = new double[this->nstep*this->nstep]();
+	this->B     = new double[this->nstep]();
+	this->Bhat  = new double[this->nstep]();
+	this->Bp    = new double[1]();
+	this->Bphat = new double[1]();
+
+	this->alloc = true;
 
 	// C coefficient
 	this->C[0] = 0.;
@@ -569,10 +562,14 @@ void RKMethod::BogackiShampine23() {
 	this->alpha = 2.;
 
 	// Allocate Butcher's tableau
-	this->C.resize(this->nstep,0.);
-	this->A.resize(this->nstep*this->nstep,0.);
-	this->B.resize(this->nstep,0.);
-	this->Bhat.resize(this->nstep,0.);
+	this->C     = new double[this->nstep]();
+	this->A     = new double[this->nstep*this->nstep]();
+	this->B     = new double[this->nstep]();
+	this->Bhat  = new double[this->nstep]();
+	this->Bp    = new double[1]();
+	this->Bphat = new double[1]();
+
+	this->alloc = true;
 
 	// C coefficient
 	this->C[0] = 0.;
@@ -617,10 +614,14 @@ void RKMethod::DormandPrince34A() {
 	this->alpha = 3.;
 
 	// Allocate Butcher's tableau
-	this->C.resize(this->nstep,0.);
-	this->A.resize(this->nstep*this->nstep,0.);
-	this->B.resize(this->nstep,0.);
-	this->Bhat.resize(this->nstep,0.);
+	this->C     = new double[this->nstep]();
+	this->A     = new double[this->nstep*this->nstep]();
+	this->B     = new double[this->nstep]();
+	this->Bhat  = new double[this->nstep]();
+	this->Bp    = new double[1]();
+	this->Bphat = new double[1]();
+
+	this->alloc = true;
 
 	// C coefficient
 	this->C[0] = 0.;
@@ -668,10 +669,14 @@ void RKMethod::Fehlberg45() {
 	this->alpha = 4.;
 
 	// Allocate Butcher's tableau
-	this->C.resize(this->nstep,0.);
-	this->A.resize(this->nstep*this->nstep,0.);
-	this->B.resize(this->nstep,0.);
-	this->Bhat.resize(this->nstep,0.);
+	this->C     = new double[this->nstep]();
+	this->A     = new double[this->nstep*this->nstep]();
+	this->B     = new double[this->nstep]();
+	this->Bhat  = new double[this->nstep]();
+	this->Bp    = new double[1]();
+	this->Bphat = new double[1]();
+
+	this->alloc = true;
 
 	// C coefficient
 	this->C[0] = 0.;
@@ -727,10 +732,14 @@ void RKMethod::CashKarp45() {
 	this->alpha = 4.;
 
 	// Allocate Butcher's tableau
-	this->C.resize(this->nstep,0.);
-	this->A.resize(this->nstep*this->nstep,0.);
-	this->B.resize(this->nstep,0.);
-	this->Bhat.resize(this->nstep,0.);
+	this->C     = new double[this->nstep]();
+	this->A     = new double[this->nstep*this->nstep]();
+	this->B     = new double[this->nstep]();
+	this->Bhat  = new double[this->nstep]();
+	this->Bp    = new double[1]();
+	this->Bphat = new double[1]();
+
+	this->alloc = true;
 
 	// C coefficient
 	this->C[0] = 0.;
@@ -786,10 +795,14 @@ void RKMethod::DormandPrince45() {
 	this->alpha = 4.;
 
 	// Allocate Butcher's tableau
-	this->C.resize(this->nstep,0.);
-	this->A.resize(this->nstep*this->nstep,0.);
-	this->B.resize(this->nstep,0.);
-	this->Bhat.resize(this->nstep,0.);
+	this->C     = new double[this->nstep]();
+	this->A     = new double[this->nstep*this->nstep]();
+	this->B     = new double[this->nstep]();
+	this->Bhat  = new double[this->nstep]();
+	this->Bp    = new double[1]();
+	this->Bphat = new double[1]();
+
+	this->alloc = true;
 
 	// C coefficient
 	this->C[0] = 0.;
@@ -858,10 +871,14 @@ void RKMethod::DormandPrince45A() {
 	this->alpha = 4.;
 
 	// Allocate Butcher's tableau
-	this->C.resize(this->nstep,0.);
-	this->A.resize(this->nstep*this->nstep,0.);
-	this->B.resize(this->nstep,0.);
-	this->Bhat.resize(this->nstep,0.);
+	this->C     = new double[this->nstep]();
+	this->A     = new double[this->nstep*this->nstep]();
+	this->B     = new double[this->nstep]();
+	this->Bhat  = new double[this->nstep]();
+	this->Bp    = new double[1]();
+	this->Bphat = new double[1]();
+
+	this->alloc = true;
 
 	// C coefficient
 	this->C[0] = 0.;
@@ -927,10 +944,14 @@ void RKMethod::Calvo56() {
 	this->alpha = 5.;
 
 	// Allocate Butcher's tableau
-	this->C.resize(this->nstep,0.);
-	this->A.resize(this->nstep*this->nstep,0.);
-	this->B.resize(this->nstep,0.);
-	this->Bhat.resize(this->nstep,0.);
+	this->C     = new double[this->nstep]();
+	this->A     = new double[this->nstep*this->nstep]();
+	this->B     = new double[this->nstep]();
+	this->Bhat  = new double[this->nstep]();
+	this->Bp    = new double[1]();
+	this->Bphat = new double[1]();
+
+	this->alloc = true;
 
 	// C coefficient
 	this->C[0] = 0.;
@@ -1017,10 +1038,14 @@ void RKMethod::DormandPrince78() {
 	this->alpha = 7.;
 
 	// Allocate Butcher's tableau
-	this->C.resize(this->nstep,0.);
-	this->A.resize(this->nstep*this->nstep,0.);
-	this->B.resize(this->nstep,0.);
-	this->Bhat.resize(this->nstep,0.);
+	this->C     = new double[this->nstep]();
+	this->A     = new double[this->nstep*this->nstep]();
+	this->B     = new double[this->nstep]();
+	this->Bhat  = new double[this->nstep]();
+	this->Bp    = new double[1]();
+	this->Bphat = new double[1]();
+
+	this->alloc = true;
 
 	// C coefficient
 	this->C[0]  = 0.;
@@ -1161,10 +1186,14 @@ void RKMethod::Curtis810() {
 	this->alpha = 8.;
 
 	// Allocate Butcher's tableau
-	this->C.resize(this->nstep,0.);
-	this->A.resize(this->nstep*this->nstep,0.);
-	this->B.resize(this->nstep,0.);
-	this->Bhat.resize(this->nstep,0.);
+	this->C     = new double[this->nstep]();
+	this->A     = new double[this->nstep*this->nstep]();
+	this->B     = new double[this->nstep]();
+	this->Bhat  = new double[this->nstep]();
+	this->Bp    = new double[1]();
+	this->Bphat = new double[1]();
+
+	this->alloc = true;
 
 	// C coefficient
 	this->C[0]  = 0.;
@@ -1462,10 +1491,14 @@ void RKMethod::Hiroshi912() {
 	this->alpha = 9.;
 
 	// Allocate Butcher's tableau
-	this->C.resize(this->nstep,0.);
-	this->A.resize(this->nstep*this->nstep,0.);
-	this->B.resize(this->nstep,0.);
-	this->Bhat.resize(this->nstep,0.);
+	this->C     = new double[this->nstep]();
+	this->A     = new double[this->nstep*this->nstep]();
+	this->B     = new double[this->nstep]();
+	this->Bhat  = new double[this->nstep]();
+	this->Bp    = new double[1]();
+	this->Bphat = new double[1]();
+
+	this->alloc = true;
 
 	// C coefficient
 	this->C[0]  = 0.;
@@ -1983,12 +2016,14 @@ void RKMethod::RungeKuttaNystrom34() {
 	this->alpha = 3.;
 
 	// Allocate Butcher's tableau
-	this->C.resize(this->nstep,0.);
-	this->A.resize(this->nstep*this->nstep,0.);
-	this->B.resize(this->nstep,0.);
-	this->Bhat.resize(this->nstep,0.);
-	this->Bp.resize(this->nstep,0.);
-	this->Bphat.resize(this->nstep,0.);
+	this->C     = new double[this->nstep]();
+	this->A     = new double[this->nstep*this->nstep]();
+	this->B     = new double[this->nstep]();
+	this->Bhat  = new double[this->nstep]();
+	this->Bp    = new double[this->nstep]();
+	this->Bphat = new double[this->nstep]();
+
+	this->alloc = true;
 
 	// C coefficient
 	this->C[0] = 0.0e0;
@@ -2043,12 +2078,14 @@ void RKMethod::RungeKuttaNystrom46() {
 	this->alpha = 4.;
 
 	// Allocate Butcher's tableau
-	this->C.resize(this->nstep,0.);
-	this->A.resize(this->nstep*this->nstep,0.);
-	this->B.resize(this->nstep,0.);
-	this->Bhat.resize(this->nstep,0.);
-	this->Bp.resize(this->nstep,0.);
-	this->Bphat.resize(this->nstep,0.);
+	this->C     = new double[this->nstep]();
+	this->A     = new double[this->nstep*this->nstep]();
+	this->B     = new double[this->nstep]();
+	this->Bhat  = new double[this->nstep]();
+	this->Bp    = new double[this->nstep]();
+	this->Bphat = new double[this->nstep]();
+
+	this->alloc = true;
 
 	// C coefficient
 	this->C[0] = 0.;
@@ -2122,12 +2159,14 @@ void RKMethod::RungeKuttaNystrom68() {
 	this->alpha = 6.;
 
 	// Allocate Butcher's tableau
-	this->C.resize(this->nstep,0.);
-	this->A.resize(this->nstep*this->nstep,0.);
-	this->B.resize(this->nstep,0.);
-	this->Bhat.resize(this->nstep,0.);
-	this->Bp.resize(this->nstep,0.);
-	this->Bphat.resize(this->nstep,0.);
+	this->C     = new double[this->nstep]();
+	this->A     = new double[this->nstep*this->nstep]();
+	this->B     = new double[this->nstep]();
+	this->Bhat  = new double[this->nstep]();
+	this->Bp    = new double[this->nstep]();
+	this->Bphat = new double[this->nstep]();
+
+	this->alloc = true;
 
 	// C coefficient
 	this->C[0] = 0.0e0;
@@ -2235,12 +2274,14 @@ void RKMethod::RungeKuttaNystrom1012() {
 	this->alpha = 10.;
 
 	// Allocate Butcher's tableau
-	this->C.resize(this->nstep,0.);
-	this->A.resize(this->nstep*this->nstep,0.);
-	this->B.resize(this->nstep,0.);
-	this->Bhat.resize(this->nstep,0.);
-	this->Bp.resize(this->nstep,0.);
-	this->Bphat.resize(this->nstep,0.);
+	this->C     = new double[this->nstep]();
+	this->A     = new double[this->nstep*this->nstep]();
+	this->B     = new double[this->nstep]();
+	this->Bhat  = new double[this->nstep]();
+	this->Bp    = new double[this->nstep]();
+	this->Bphat = new double[this->nstep]();
+
+	this->alloc = true;
 
 	// C coefficient
 	this->C[0]  = 0.0e0;

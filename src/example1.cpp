@@ -7,6 +7,16 @@
 	The function to call is ODERK, a generic Runge-Kutta variable step integrator.
 
 	The inputs of this function are:
+		> scheme: Runge-Kutta scheme to use. Options are:
+			* Euler-Heun 1(2) (eulerheun12)
+			* Bogacki-Shampine 2(3) (bogackishampine23)
+			* Fehlberg 4(5) (fehlberg45)
+			* Cash-Carp 4(5) (cashcarp45)
+			* Dormand-Prince 4-5 (dormandprince45)
+			* Calvo 5(6) (calvo56)
+			* Dormand-Prince 7(8) (dormandprince78)
+			* Curtis 8(10) (curtis810)
+			* Hiroshi 9(12) (hiroshi912)
 		> odefun: a function so that
 			dydx = odefun(x,y,n)
 		where n is the number of y variables to integrate.
@@ -16,20 +26,10 @@
 
 		An additional parameter can be passed to the integrator, which contains
 		parameters for the integrator:
-			> h0:     Initial step for the interval
-			> hmin:   Minimum interval allowed
-			> eps:    Tolerance to meet.
-			> scheme: Runge-Kutta scheme to use. Options are:
-				* Euler-Heun 1(2) (eulerheun12)
-				* Bogacki-Shampine 2(3) (bogackishampine23)
-				* Fehlberg 4(5) (fehlberg45)
-				* Cash-Carp 4(5) (cashcarp45)
-				* Dormand-Prince 4-5 (dormandprince45)
-				* Calvo 5(6) (calvo56)
-				* Dormand-Prince 7(8) (dormandprince78)
-				* Curtis 8(10) (curtis810)
-				* Hiroshi 9(12) (hiroshi912)
-			> eventfcn: Event function.
+			> h0:       Initial step for the interval
+			> hmin:      Minimum interval allowed
+			> eps:       Tolerance to meet.
+			> eventfcn:  Event function.
 			> outputfcn: Output function.
 
 	If the inputted tolerance is not met, the intergrator will use hmin and will
@@ -45,6 +45,7 @@
 		> y: solution y values of size n per each variable.
 
 	Arnau Miro, 2018
+	Last rev: 2020
 */
 
 #include <cstdlib>
@@ -67,10 +68,10 @@ int main() {
 	double y0[n]    = {0.,0.};
 
 	// Runge-Kutta parameters
-	RK_PARAM rkp = rkdefaults(xspan);
+	RK_PARAM rkp = rkparams(xspan);
 
 	// Runge-Kutta
-	RK_OUT rko = odeRK(testfun,xspan,y0,n,rkp);
+	RK_OUT rko = odeRK("dormandprice45",testfun,xspan,y0,n,&rkp);
 
 	// Write results to a file
 	printf("retval %d error %.2e\n",rko.retval,rko.err);
@@ -88,6 +89,6 @@ int main() {
 	}
 
 	// Finish
-	freerkout(rko);
+	freerkout(&rko);
 	return 0;
 }
