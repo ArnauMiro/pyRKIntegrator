@@ -129,11 +129,11 @@ class RK_PARAM(ct.Structure):
 		with the code.
 		'''
 		return 1
-	def set_h(self,xspan):
+	def set_h(self,xspan,div=10.):
 		'''
 		Initial and max step based on xspan
 		'''
-		self.h0 = (xspan[1] - xspan[0])/10.;
+		self.h0 = (xspan[1] - xspan[0])/div
 
 class RK_OUT(ct.Structure):
 	'''
@@ -165,7 +165,6 @@ class odeset(RK_PARAM):
 	Sets the parameters for odeRK. They are:
 		> h0:     Initial step for the interval
 		> eps:    Tolerance to meet (Relative).
-		> n: Number of OMP threads to run in parallel
 		> eventfcn: Event function.
 		> outputfcn: Output function.
 	'''
