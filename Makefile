@@ -26,7 +26,7 @@ DEBUGGING      = OFF
 
 # Paths to the installed binaries
 #
-INSTALL_PATH = ./
+INSTALL_PATH = $(shell pwd)
 BIN_PATH     = $(INSTALL_PATH)/bin
 LIBS_PATH    = $(INSTALL_PATH)/lib
 INC_PATH     = $(INSTALL_PATH)/include
@@ -180,6 +180,20 @@ $(LIBRK): $(RK_OBJS)
 includes: 
 	@cp $(RK_INCL) $(INC_PATH)
 
+# Python
+#
+python: pypackages
+	@echo ""
+	@echo "Python programs deployed successfully"
+pypackages: pyRK
+	-@mkdir -p ${LIBS_PATH}/site-packages
+	@echo ""
+	@echo "Python libraries installed in <${LIBS_PATH}/site-packages>"
+	@echo "You might want to add this folder to PYTHONPATH"
+pyRK: includes $(LIBRK)
+	@rm -rf ${LIBS_PATH}/site-packages/RungeKutta
+	@rsync -rupE $(PYTH_PATH)/RungeKutta ${LIBS_PATH}/site-packages/
+	@mv ${LIBS_PATH}/$(LIBRK) ${LIBS_PATH}/site-packages/RungeKutta/
 
 # Generic object makers
 #

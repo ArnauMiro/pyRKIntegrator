@@ -83,13 +83,13 @@ inline const char *RKS2str(const RK_SCHEME rks){
 	switch (rks) {
 		case EULERHEUN12:       return "eulerheun12";
 		case BOGACKISHAMPINE23: return "bogackishampine23";
-		case DORMANDPRINCE34A:  return "dormandprice34a";
+		case DORMANDPRINCE34A:  return "dormandprince34a";
 		case FEHLBERG45:        return "fehlberg45";
 		case CASHKARP45:        return "cashkarp45";
-		case DORMANDPRINCE45:   return "dormandprice45";
-		case DORMANDPRINCE45A:  return "dormandprice45a";
+		case DORMANDPRINCE45:   return "dormandprince45";
+		case DORMANDPRINCE45A:  return "dormandprince45a";
 		case CALVO56:           return "calvo56";
-		case DORMANDPRINCE78:   return "dormandprice78";
+		case DORMANDPRINCE78:   return "dormandprince78";
 		case CURTIS810:         return "curtis810";
 		case HIROSHI912:        return "hiroshi912";
 		case RKN34:             return "rnk34";
@@ -105,13 +105,13 @@ inline RK_SCHEME str2RKS(const char *str) {
 	// Convert to lower
 	if (rkstr == "eulerheun12")       return EULERHEUN12;
 	if (rkstr == "bogackishampine23") return BOGACKISHAMPINE23;
-	if (rkstr == "dormandprice34a")   return DORMANDPRINCE34A;
+	if (rkstr == "dormandprince34a")  return DORMANDPRINCE34A;
 	if (rkstr == "fehlberg45")        return FEHLBERG45;
 	if (rkstr == "cashkarp45")        return CASHKARP45;
-	if (rkstr == "dormandprice45")    return DORMANDPRINCE45;
-	if (rkstr == "dormandprice45a")   return DORMANDPRINCE45A;
+	if (rkstr == "dormandprince45")   return DORMANDPRINCE45;
+	if (rkstr == "dormandprince45a")  return DORMANDPRINCE45A;
 	if (rkstr == "calvo56")           return CALVO56;
-	if (rkstr == "dormandprice78")    return DORMANDPRINCE78;
+	if (rkstr == "dormandprince78")   return DORMANDPRINCE78;
 	if (rkstr == "curtis810")         return CURTIS810;
 	if (rkstr == "hiroshi912")        return HIROSHI912;
 	if (rkstr == "rkn34")             return RKN34;
@@ -132,8 +132,8 @@ typedef struct _RK_PARAM {
 	double epsevf;
 	double minstep;
 	double secfact;
-	double secfact_max = 5.;
-	double secfact_min = 0.2;
+	double secfact_max;
+	double secfact_min;
 	int (*eventfcn)(double,double*,int,double*,int*); // Event function must return continue or stop
 	int (*outputfcn)(double,double*,int);             // Output function must return continue or stop
 } RK_PARAM;
@@ -141,18 +141,18 @@ typedef struct _RK_PARAM {
 inline RK_PARAM rkparams(const double xspan[2]){
 	RK_PARAM rkp;
 	// Initial and max step based on xspan
-	rkp.h0   = (xspan[1] - xspan[0])/10.;
+	rkp.h0          = (xspan[1] - xspan[0])/10.;
 	// Tolerance
-	rkp.eps     = 1e-8;
-	rkp.epsevf  = 1e-4;
-	rkp.minstep = 1.e-12;
+	rkp.eps         = 1e-8;
+	rkp.epsevf      = 1e-4;
+	rkp.minstep     = 1.e-12;
 	// Security factors
 	rkp.secfact     = 0.9;
 	rkp.secfact_max = 5.;
 	rkp.secfact_min = 0.2;
 	// No event or output function
-	rkp.eventfcn  = NULL;
-	rkp.outputfcn = NULL;
+	rkp.eventfcn    = NULL;
+	rkp.outputfcn   = NULL;
 	return rkp;
 }
 
@@ -167,8 +167,7 @@ typedef struct _RK_OUT {
 	double *x, *y, *dy;
 } RK_OUT;
 
-extern "C" inline void freerkout(const RK_OUT *rko) { delete[] rko->x; delete[] rko->y; delete[] rko->dy; }
-
+extern "C" void freerkout(const RK_OUT *rko);
 
 /*
 	RUNGE KUTTA METHOD CLASS

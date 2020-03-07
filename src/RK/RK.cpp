@@ -432,13 +432,19 @@ extern "C" RK_OUT odeRKN(const char *scheme, void (*odefun)(double,double*,int,d
 
 
 /*
+	RUNGE-KUTTA OUTPUT
+
+	Output for the Runge-Kutta integrator.
+*/
+extern "C" void freerkout(const RK_OUT *rko) { delete[] rko->x; delete[] rko->y; delete[] rko->dy; }
+
+
+/*
 	CHECK TABLEAU
 
 	Checks for errors in the Butcher's tableau
 */
-extern "C" int check_tableau(const RK_SCHEME rks) { RKMethod rkm(rks); return rkm.CheckTableau(); }
-
-
+extern "C" int check_tableau(const char *scheme) { RKMethod rkm(str2RKS(scheme)); return rkm.CheckTableau(); }
 
 
 /*
