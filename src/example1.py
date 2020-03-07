@@ -4,14 +4,15 @@
 #			 and different schemes
 #
 # Arnau Miro, 2018
+# Last rev: 2020
+from __future__ import print_function
 
 import numpy as np
+import RungeKutta as rk
 
 import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
-
-import RungeKutta as rk
 
 # Define the function to integrate
 def odefun(x,y,n,dydx):
@@ -48,19 +49,18 @@ ax2.set_xlabel('x')
 ax2.set_ylabel('f(x)')
 
 # Loop all the schemes
-for scheme in odeset.schemes:
+for scheme in rk.RK_SCHEMES:
 	# Set integration scheme
-	odeset.set_scheme(scheme)
 	odeset.set_h(xspan)  # set defaults for h0 and hmin
 	# Check the sanity of the RungeKutta tableau
-	if rk.CheckTableau(odeset):
-		print "scheme %s, tableau ok," % scheme,
+	if rk.CheckTableau(scheme):
+		print("scheme %s, tableau ok," % scheme,end=' ')
 	else:
-		print "scheme %s, problems with tableau!" % scheme
+		print("scheme %s, problems with tableau!" % scheme)
 		continue
 	# Launch the integrator
-	x,y,err = rk.odeRK(odefun,xspan,y0,odeset)
-	print "error = %.2e with %d steps" % (err,len(x))
+	x,y,err = rk.odeRK(scheme,odefun,xspan,y0,odeset)
+	print("error = %.2e with %d steps" % (err,len(x)))
 	# Plot
 	ax1.plot(x,y[:,0],label=scheme)
 	ax2.plot(x,y[:,1],label=scheme)
