@@ -4,19 +4,21 @@
 #			 and output/event functions.
 #
 # Arnau Miro, 2018
+# Last rev: 2020
+from __future__ import print_function
 
 import numpy as np
+import RungeKutta as rk
 
 import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
-
-import RungeKutta as rk
+plt.style.use('ggplot')
 
 # Parameters
-g = 9.81
-k = 1.
-m = 10.
+g    = 9.81
+k    = 1.
+m    = 10.
 tend = 10.
 h0   = 100.
 v0   = 0.
@@ -52,9 +54,11 @@ def printvalues(t,y,n):
 	'''
 	v = y[0]
 	h = y[1]
-	print "time %.2f s, h = %.2f, v = %.2f" % (t,h,v)
+	print("time %.2f s, h = %.2f, v = %.2f" % (t,h,v))
 	return 1
 
+# Define a function to stop the integration once a
+# certain criteria is met
 def stoponzero(x,y,n,value,direction):
 	'''
 	Event function. Must be as:
@@ -77,7 +81,7 @@ def stoponzero(x,y,n,value,direction):
 		> 0: stop
 	'''
 	value[0] = y[1]
-	return 0;
+	return 0
 
 # Set span and initial solution
 tspan = np.array([0., tend],np.double)
@@ -89,24 +93,25 @@ odeset = rk.odeset(eventfcn=stoponzero,outputfcn=printvalues) # initalize with b
 odeset.set_h(tspan)  # set defaults for h0 and hmin
 
 # Launch the integrator
-t,y,err = rk.odeRK(eqnfreefall,tspan,y0,odeset)
-print "end %.2f s, h = %.2f, v = %.2f" % (t[-1],y[-1,1],y[-1,0])
-print "Integration error: %.2e" % err
+print('Free-fall:')
+t,y,err = rk.ode45(eqnfreefall,tspan,y0,odeset)
+print("end %.2f s, h = %.2f, v = %.2f" % (t[-1],y[-1,1],y[-1,0]))
+print("Integration error: %.2e" % err)
 
 # Theoretical solution
 v_th = lambda t : -(m/k)*g*(1-np.exp((-k/m)*t));
 
-# Plot the results
+# Create plot figures
 plt.figure(num=1,figsize=(8,6),dpi=100,facecolor='w',edgecolor='k')
-plt.plot(t,y[:,0],'k',label='Numerical Result')
-plt.plot(t,v_th(t),'k--',label='Theoretical Result')
-plt.xlabel('Time (sec)')
-plt.ylabel('Velocity (m/s)')
-plt.legend()
-
-plt.figure(num=2,figsize=(8,6),dpi=100,facecolor='w',edgecolor='k')
-plt.plot(t,y[:,1])
-plt.xlabel('Time (sec)')
-plt.ylabel('Altitude (m)')
+ax1 = plt.subplot(2,1,1)
+ax1.plot(t,y[:,0],'k',label='Numerical Result')
+ax1.plot(t,v_th(t),'k--',label='Theoretical Result')
+ax1.set_xlabel('Time (sec)')
+ax1.set_ylabel('Velocity (m/s)')
+ax1.legend()
+ax2 = plt.subplot(2,1,2)
+ax2.plot(t,y[:,1],'k')
+ax2.set_xlabel('Time (sec)')
+ax2.set_ylabel('Altitude (m)')
 
 plt.show()

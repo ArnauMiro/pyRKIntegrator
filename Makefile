@@ -142,7 +142,7 @@ endif
 
 # One rule to compile them all, one rule to find them,
 # One rule to bring them all and in the compiler link them.
-all: paths libs examples
+all: paths libs examples python
 	@echo ""
 	@echo "CFD tools deployed successfully"
 
@@ -153,10 +153,13 @@ paths:
 
 # Examples
 #
-examples: example1
+examples: example1 example2
 	@echo ""
 	@echo "Examples compiled successfully"
 example1: src/example1.o
+	$(CXX) $(CXXFLAGS) -o $@ $< -lRK -L$(LIBS_PATH)
+	@mv $@ $(BIN_PATH)
+example2: src/example2.o
 	$(CXX) $(CXXFLAGS) -o $@ $< -lRK -L$(LIBS_PATH)
 	@mv $@ $(BIN_PATH)
 

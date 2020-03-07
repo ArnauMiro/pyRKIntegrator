@@ -13,6 +13,7 @@ import RungeKutta as rk
 import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
+plt.style.use('ggplot')
 
 # Define the function to integrate
 def odefun(x,y,n,dydx):

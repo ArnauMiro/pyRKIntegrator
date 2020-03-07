@@ -61,7 +61,6 @@
 
 #define NNSTEP 1000
 
-
 /*
 	ODERK
 
@@ -430,7 +429,6 @@ extern "C" RK_OUT odeRKN(const char *scheme, void (*odefun)(double,double*,int,d
 	return rko;
 }
 
-
 /*
 	RUNGE-KUTTA OUTPUT
 
@@ -438,6 +436,18 @@ extern "C" RK_OUT odeRKN(const char *scheme, void (*odefun)(double,double*,int,d
 */
 extern "C" void freerkout(const RK_OUT *rko) { delete[] rko->x; delete[] rko->y; delete[] rko->dy; }
 
+void writerkout(const char *outfile, const RK_OUT *rko, const int nvars) {
+	FILE *myfile;
+	myfile = fopen(outfile,"w");
+	
+	for(int ii=0; ii<rko->n; ++ii){
+		std::fprintf(myfile,"%f\t",rko->x[ii]);
+		for (int jj=0; jj<nvars; ++jj)
+			std::fprintf(myfile,"%f\t",rko->y[nvars*ii + jj]);
+		std::fprintf(myfile, "\n");
+	}
+	fclose(myfile);
+}
 
 /*
 	CHECK TABLEAU
@@ -445,7 +455,6 @@ extern "C" void freerkout(const RK_OUT *rko) { delete[] rko->x; delete[] rko->y;
 	Checks for errors in the Butcher's tableau
 */
 extern "C" int check_tableau(const char *scheme) { RKMethod rkm(str2RKS(scheme)); return rkm.CheckTableau(); }
-
 
 /*
 	RUNGE KUTTA METHOD

@@ -168,6 +168,7 @@ typedef struct _RK_OUT {
 } RK_OUT;
 
 extern "C" void freerkout(const RK_OUT *rko);
+void writerkout(const char *outfile, const RK_OUT *rko, const int nvars);
 
 /*
 	RUNGE KUTTA METHOD CLASS
