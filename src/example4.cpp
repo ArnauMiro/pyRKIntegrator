@@ -1,7 +1,7 @@
 /*
-	EXAMPLE 1
+	EXAMPLE 4
 	
-	Using the odeRK with odeset and different schemes.
+	Using the odeRKN with odeset and different schemes.
 
 	Arnau Miro, 2018
 	Last rev: 2020
@@ -18,23 +18,16 @@
 
 // Schemes to test
 std::vector<std::string> schemes = {
-	"eulerheun12",
-	"bogackishampine23",
-	"dormandprince34a",	
-    "fehlberg45",
-    "cashkarp45",
-    "dormandprince45",
-    "dormandprince45a",
-    "calvo56",
-    "dormandprince78",
-    "curtis810",
-    "hiroshi912"
+    "rkn34",
+    "rkn46",
+    "rkn68",
+    "rkn1012"
 };
 
-void testfun(double x, double *y, int n, double *dydx) {
+void testfun(double x, double *y, int n, double *dy2dx) {
 
-	dydx[0] = std::cos(x) + std::sin(y[0]);
-	dydx[1] = std::sin(x) + std::cos(y[1]);
+	dy2dx[0] = -std::sin(x) + std::cos(y[0]);
+	dy2dx[1] = std::cos(x) - std::sin(y[1]);
 }
 
 int main() {
@@ -43,6 +36,7 @@ int main() {
 	const int n = 2;
 	double xspan[2] = {0.,10.};
 	double y0[n]    = {0.,0.};
+	double dy0[n]   = {1.,1.};
 
 	// Runge-Kutta parameters
 	RK_PARAM rkp = rkparams(xspan);
@@ -51,7 +45,7 @@ int main() {
     for (std::string scheme : schemes) {
         std::printf("scheme %s, ",scheme.c_str());
 		// Launch the integrator
-		RK_OUT rko = odeRK(scheme.c_str(),testfun,xspan,y0,n,&rkp);
+		RK_OUT rko = odeRKN(scheme.c_str(),testfun,xspan,y0,dy0,n,&rkp);
 	    // Finish
 		std::printf("error = %.2e with %d steps\n",rko.err,rko.n);
 	    freerkout(&rko);

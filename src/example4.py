@@ -1,17 +1,19 @@
 #!/bin/env python
 #
-# Example 1: using the odeRKN with odeset
+# Example 4: using the odeRKN with odeset
 #			 and different schemes
 #
 # Arnau Miro, 2018
+# Last rev: 2020
+from __future__ import print_function
 
 import numpy as np
+import RungeKutta as rk
 
 import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
-
-import RungeKutta as rk
+plt.style.use('ggplot')
 
 # Define the function to integrate
 def odefun(x,y,n,dy2dx):
@@ -36,7 +38,7 @@ dy0   = np.array([1., 1.], np.double)
 
 # Use the odeset to generate the integrator
 # parameters structure
-odeset = rk.odesetN() # initalize with basic parameters
+odeset = rk.odeset() # initalize with basic parameters
 
 # Create plot figures
 plt.figure(num=1,figsize=(8,6),dpi=100,facecolor='w',edgecolor='k')
@@ -49,13 +51,13 @@ ax2.set_xlabel('x')
 ax2.set_ylabel('f(x)')
 
 # Loop all the schemes
-for scheme in odeset.schemes:
+for scheme in rk.RKN_SCHEMES:
 	# Set integration scheme
-	odeset.set_scheme(scheme)
 	odeset.set_h(xspan)  # set defaults for h0 and hmin
 	# Launch the integrator
-	x,y,dy,err = rk.odeRKN(odefun,xspan,y0,dy0,odeset)
-	print "error = %.2e with %d steps" % (err,len(x))
+	print("scheme %s, " % scheme,end=' ')
+	x,y,dy,err = rk.odeRKN(scheme,odefun,xspan,y0,dy0,odeset)
+	print("error = %.2e with %d steps" % (err,len(x)))
 	# Plot
 	ax1.plot(x,y[:,0],label=scheme)
 	ax2.plot(x,y[:,1],label=scheme)
