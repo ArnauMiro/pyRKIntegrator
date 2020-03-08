@@ -153,13 +153,16 @@ paths:
 
 # Examples
 #
-examples: example1 example2
+examples: example1 example2 example3
 	@echo ""
 	@echo "Examples compiled successfully"
 example1: src/example1.o
 	$(CXX) $(CXXFLAGS) -o $@ $< -lRK -L$(LIBS_PATH)
 	@mv $@ $(BIN_PATH)
 example2: src/example2.o
+	$(CXX) $(CXXFLAGS) -o $@ $< -lRK -L$(LIBS_PATH)
+	@mv $@ $(BIN_PATH)
+example3: src/example3.o
 	$(CXX) $(CXXFLAGS) -o $@ $< -lRK -L$(LIBS_PATH)
 	@mv $@ $(BIN_PATH)
 
