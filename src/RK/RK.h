@@ -52,6 +52,7 @@
 #define RK_H
 
 #include <string>
+#include <algorithm>
 
 /*
 	RUNGE-KUTTA SCHEMES
@@ -102,7 +103,7 @@ inline const char *RKS2str(const RK_SCHEME rks){
 
 inline RK_SCHEME str2RKS(const char *str) {
 	std::string rkstr(str);
-	// Convert to lower
+	std::transform(rkstr.begin(), rkstr.end(), rkstr.begin(), ::tolower);
 	if (rkstr == "eulerheun12")       return EULERHEUN12;
 	if (rkstr == "bogackishampine23") return BOGACKISHAMPINE23;
 	if (rkstr == "dormandprince34a")  return DORMANDPRINCE34A;
