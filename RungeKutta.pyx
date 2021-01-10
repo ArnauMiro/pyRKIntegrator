@@ -91,7 +91,9 @@ cdef extern from "RK.h":
 ctypedef void (*odefun)(double,double*,int,double*)
 odefun_f = ct.CFUNCTYPE(None, ct.c_double, ct.POINTER(ct.c_double), ct.c_int, ct.POINTER(ct.c_double))
 ctypedef int  (*eventfcn)(double,double*,int,double*,int*)
+event_f    = ct.CFUNCTYPE(ct.c_int, ct.c_double, ct.POINTER(ct.c_double), ct.c_int, ct.POINTER(ct.c_double), ct.POINTER(ct.c_int))
 ctypedef int  (*outputfcn)(double,double*,int) 
+output_f   = ct.CFUNCTYPE(ct.c_int, ct.c_double, ct.POINTER(ct.c_double), ct.c_int)
 
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
@@ -112,7 +114,7 @@ cdef double[:] double1D_to_numpy(double *cdouble,int n):
 @cython.nonecheck(False)
 cdef double[:,:] double2D_to_numpy(double *cdouble, int n, int m):
 	'''
-	Convert a 1D C double pointer into a numpy array
+	Convert a 2D C double pointer into a numpy array
 	'''
 	cdef int ii
 	cdef np.ndarray[np.double_t,ndim=2] out = np.zeros((n,m),np.double)
@@ -147,10 +149,10 @@ cdef class rkout:
 		return self.rko.err
 	@property
 	def x(self):
-		return double1D_to_numpy(self.rko.x,self.rko.n)
+		return double1D_to_numpy(self.rko.x,self.rko.n).copy()
 	@property
 	def y(self):
-		return double2D_to_numpy(self.rko.y,self.rko.n,self.nvariables)
+		return double2D_to_numpy(self.rko.y,self.rko.n,self.nvariables).copy()
 
 
 cdef class odeset:
@@ -167,10 +169,12 @@ cdef class odeset:
 
 	def __cinit__(self,double h0=.01,double eps=1.e-8, double epsevf=1.e-4, double minstep=1.e-12,\
 				  double secfact=0.9,double secfact_max=5.,double secfact_min=0.2,\
-				  object eventfcn=None,object outputfcn=None):
+				  object eventfun=None,object outputfun=None):
 		'''
 		Class constructor
 		'''
+		cdef eventfcn  c_eventfun  = NULL
+		cdef outputfcn c_outputfun = NULL
 		# odeRK variables
 		self.c_rkp.h0          = h0
 		self.c_rkp.eps         = eps
@@ -179,8 +183,14 @@ cdef class odeset:
 		self.c_rkp.secfact     = secfact
 		self.c_rkp.secfact_max = secfact_max
 		self.c_rkp.secfact_min = secfact_min
-		self.c_rkp.eventfcn    = NULL #if eventfcn  == None else eventfcn
-		self.c_rkp.outputfcn   = NULL #if outputfcn == None else outputfcn
+
+		if not eventfun == None: 
+			c_eventfun  = (<eventfcn *><size_t>ct.addressof(event_f(eventfun)))[0]
+		if not outputfun == None:
+			c_outputfun = (<outputfcn *><size_t>ct.addressof(output_f(outputfun)))[0]
+
+		self.c_rkp.eventfcn  = c_eventfun 
+		self.c_rkp.outputfcn = c_outputfun 
 
 	def set_h(self,xspan,div=10.):
 		'''
@@ -255,7 +265,7 @@ def odeRK(object scheme,object fun,double[:] xspan,double[:] y0,odeset params=od
 			* Dormand-Prince 7(8) (dormandprince78)
 			* Curtis 8(10) (curtis810)
 			* Hiroshi 9(12) (hiroshi912)
-		> odefun: a function so that
+		> fun: a function so that
 			dydx = odefun(x,y,n)
 		where n is the number of y variables to integrate.
 		> xspan: integration start and end point.
@@ -294,6 +304,64 @@ def odeRK(object scheme,object fun,double[:] xspan,double[:] y0,odeset params=od
 	cdef double     err = out.err
 
 	return x,y,err
+
+
+def ode23(object fun,double[:] xspan,double[:] y0,odeset params=odeset()):
+	'''
+	ODE23
+
+	Numerical integration using Runge-Kutta methods, implemented
+	based on MATLAB's ode23.
+
+	The inputs of this function are:
+		> fun: a function so that
+			dydx = odefun(x,y,n)
+		where n is the number of y variables to integrate.
+		> xspan: integration start and end point.
+		> y0: initial conditions (must be size n).
+
+		An additional parameter can be passed to the integrator, which contains
+		parameters for the integrator:
+			> h0:     Initial step for the interval
+			> eps:    Tolerance to meet.
+			> eventfcn: Event function.
+			> outputfcn: Output function.
+
+	The function will return:
+		> x: solution x values of size n.
+		> y: solution y values of size n per each variable.
+		> err: Maximum error achieved.
+	'''
+	return odeRK("bogackishampine23",fun,xspan,y0,params)
+
+
+def ode45(object fun,double[:] xspan,double[:] y0,odeset params=odeset()):
+	'''
+	ODE45
+
+	Numerical integration using Runge-Kutta methods, implemented
+	based on MATLAB's ode45.
+
+	The inputs of this function are:
+		> odefun: a function so that
+			dydx = odefun(x,y,n)
+		where n is the number of y variables to integrate.
+		> xspan: integration start and end point.
+		> y0: initial conditions (must be size n).
+
+		An additional parameter can be passed to the integrator, which contains
+		parameters for the integrator:
+			> h0:     Initial step for the interval
+			> eps:    Tolerance to meet.
+			> eventfcn: Event function.
+			> outputfcn: Output function.
+
+	The function will return:
+		> x: solution x values of size n.
+		> y: solution y values of size n per each variable.
+		> err: Maximum error achieved.
+	'''
+	return odeRK("dormandprince45",fun,xspan,y0,params)
 
 
 # Convert to a function that python can see
