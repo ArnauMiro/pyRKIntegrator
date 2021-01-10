@@ -128,6 +128,28 @@ cdef np.ndarray[np.double_t,ndim=2] double2D_to_numpy(double *cdouble, int n, in
 	memcpy(&out[0,0],cdouble,n*m*sizeof(double))
 	return out
 
+cdef void odefun_wrapper(double t,double* y,int n,double* dydx):
+	global wrap_odefun
+	cdef np.ndarray[np.double_t,ndim=1] _y    = double1D_to_numpy(y,n)
+	cdef np.ndarray[np.double_t,ndim=1] _dydx = double1D_to_numpy(dydx,n)
+	wrap_odefun(t,_y,n,_dydx)
+	memcpy(dydx,&_dydx[0],n*sizeof(double))
+
+cdef int eventfun_wrapper(double t,double* y,int n,double* value,int* direction):
+	global wrap_eventfun
+	cdef np.ndarray[np.double_t,ndim=1] _y      = double1D_to_numpy(y,n)
+	cdef np.ndarray[np.double_t,ndim=1] _value  = double1D_to_numpy(value,n)
+	cdef np.ndarray[np.int_t,ndim=1] _direction = int1D_to_numpy(direction,n)
+	cdef int retval = wrap_eventfun(t,_y,n,_value,_direction)
+	memcpy(value,&_value[0],n*sizeof(double))
+	memcpy(direction,&_direction[0],n*sizeof(int))
+	return retval
+
+cdef int outputfun_wrapper(double t,double *y,int n):
+	global wrap_outputfun
+	cdef np.ndarray[np.double_t,ndim=1] _y = double1D_to_numpy(y,n)
+	return wrap_outputfun(t,_y,n)
+
 
 cdef class rkout:
 	'''
@@ -163,22 +185,6 @@ cdef class rkout:
 	@property
 	def dy(self):
 		return double2D_to_numpy(self.rko.dy,self.rko.n,self.nvariables).copy()
-
-
-cdef int eventfun_wrapper(double t,double* y,int n,double* value,int* direction):
-	global wrap_eventfun
-	cdef np.ndarray[np.double_t,ndim=1] _y      = double1D_to_numpy(y,n)
-	cdef np.ndarray[np.double_t,ndim=1] _value  = double1D_to_numpy(value,n)
-	cdef np.ndarray[np.int_t,ndim=1] _direction = int1D_to_numpy(direction,n)
-	cdef int retval = wrap_eventfun(t,_y,n,_value,_direction)
-	memcpy(value,&_value[0],n*sizeof(double))
-	memcpy(direction,&_direction[0],n*sizeof(int))
-	return retval
-
-cdef int outputfun_wrapper(double t,double *y,int n):
-	global wrap_outputfun
-	cdef np.ndarray[np.double_t,ndim=1] _y = double1D_to_numpy(y,n)
-	return wrap_outputfun(t,_y,n)
 
 
 cdef class odeset:
@@ -309,15 +315,16 @@ def odeRK(object scheme,object fun,double[:] xspan,double[:] y0,odeset params=od
 		> y: solution y values of size n per each variable.
 		> err: Maximum error achieved.
 	'''
+	global wrap_odefun
 	if not scheme.lower() in RK_SCHEMES:
 		raise ValueError('ERROR! Scheme <%s> not implemented.' % scheme)
-	
-	cdef int n        = len(y0)
-	cdef rkout out    = rkout(nvariables=n)
-	cdef odefun c_fun = (<odefun *><size_t>ct.addressof(odefun_f(fun)))[0]
+
+	cdef int n     = len(y0)
+	cdef rkout out = rkout(nvariables=n)
+	wrap_odefun    = fun
 
 	# Run C function
-	out.rko = c_odeRK(scheme.encode('utf-8'),c_fun,&xspan[0],&y0[0],n,&params.c_rkp)
+	out.rko = c_odeRK(scheme.encode('utf-8'),&odefun_wrapper,&xspan[0],&y0[0],n,&params.c_rkp)
 	cdef int retval = out.retval
 	if retval == 0:
 		raise ValueError('ERROR! Something went wrong during the integration.')
@@ -422,15 +429,16 @@ def odeRKN(object scheme,object fun,double[:] xspan,double[:] y0,double[:] dy0,o
 		> dy: solution dy values of size n per each variable.
 		> err: Maximum error achieved.
 	'''
+	global wrap_odefun
 	if not scheme.lower() in RKN_SCHEMES:
 		raise ValueError('ERROR! Scheme <%s> not implemented.' % scheme)
 	
-	cdef int n        = len(y0)
-	cdef rkout out    = rkout(nvariables=n)
-	cdef odefun c_fun = (<odefun *><size_t>ct.addressof(odefun_f(fun)))[0]
+	cdef int n     = len(y0)
+	cdef rkout out = rkout(nvariables=n)
+	wrap_odefun    = fun 
 
 	# Run C function
-	out.rko = c_odeRKN(scheme.encode('utf-8'),c_fun,&xspan[0],&y0[0],&dy0[0],n,&params.c_rkp)
+	out.rko = c_odeRKN(scheme.encode('utf-8'),&odefun_wrapper,&xspan[0],&y0[0],&dy0[0],n,&params.c_rkp)
 	cdef int retval = out.retval
 	if retval == 0:
 		raise ValueError('ERROR! Something went wrong during the integration.')
