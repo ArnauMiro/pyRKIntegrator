@@ -48,9 +48,8 @@
 	Arnau Miro, Elena Terzic 2021
 	Last rev: 2021
 '''
-#from __future__ import print_function, division
 
-import numpy as np, ctypes as ct
+import numpy as np
 from . import RK_SCHEMES, RKN_SCHEMES
 
 cimport numpy as np
@@ -89,10 +88,6 @@ cdef extern from "RK.h":
 	cdef void freerkout(const RK_OUT *rko)
  	# Expose the check tableau
 	cdef int check_tableau(const char *scheme)
-
-
-ctypedef void (*odefun)(double,double*,int,double*)
-odefun_f = ct.CFUNCTYPE(None, ct.c_double, ct.POINTER(ct.c_double), ct.c_int, ct.POINTER(ct.c_double))
 
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
@@ -224,7 +219,10 @@ cdef class odeset:
 			wrap_outputfun       = outputfun
 			self.c_rkp.outputfcn = &outputfun_wrapper 
 
-	def set_h(self,xspan,div=10.):
+	@cython.boundscheck(False) # turn off bounds-checking for entire function
+	@cython.wraparound(False)  # turn off negative index wrapping for entire function
+	@cython.nonecheck(False)
+	def set_h(self,double[:] xspan,double div=10.):
 		'''
 		Initial and max step based on xspan
 		'''
