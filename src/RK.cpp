@@ -447,7 +447,7 @@ int check_tableau(const char *scheme) { RKMethod rkm(str2RKS(scheme)); return rk
 	Class constructor and destructor
 */
 RKMethod::RKMethod(const RK_SCHEME rks) {
-	bool alloc = false;
+	this->alloc = false;
 
 	// Selection of the Runge-Kutta method according 
 	// to the input scheme name
@@ -503,7 +503,7 @@ RKMethod::RKMethod(const RK_SCHEME rks) {
 }
 
 RKMethod::~RKMethod() {
-	if (alloc) {
+	if (this->alloc) {
 		delete [] C;
 		delete [] A;
 		delete [] B;
