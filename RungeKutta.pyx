@@ -51,32 +51,12 @@
 #from __future__ import print_function, division
 
 import numpy as np, ctypes as ct
+from . import RK_SCHEMES
 
 cimport numpy as np
 cimport cython
 from libc.string cimport memcpy
 
-## RUNGE-KUTTA SCHEMES ##
-
-RK_SCHEMES = ['eulerheun12',
-			  'bogackishampine23',
-			  'dormandprince34a',
-			  'fehlberg45',
-			  'cashkarp45',
-			  'dormandprince45',
-			  'dormandprince45a',
-			  'calvo56',
-			  'dormandprince78',
-			  'curtis810',
-			  'hiroshi912'
-			 ]
-
-## RUNGE-KUTTA-NYSTROM SCHEMES ##
-RKN_SCHEMES = ['rkn34',
-			   'rkn46',
-			   'rkn68',
-			   'rkn1012'
-			  ]
 
 # Expose functions from the RK cpp header
 cdef extern from "RK.h":
@@ -127,6 +107,19 @@ cdef double[:] double1D_to_numpy(double *cdouble,int n):
 	return out
 
 
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False)  # turn off negative index wrapping for entire function
+@cython.nonecheck(False)
+cdef double[:,:] double2D_to_numpy(double *cdouble, int n, int m):
+	'''
+	Convert a 1D C double pointer into a numpy array
+	'''
+	cdef int ii
+	cdef np.ndarray[np.double_t,ndim=2] out = np.zeros((n,m),np.double)
+	memcpy(&out[0,0],cdouble,n*m*sizeof(double))
+	return out
+
+
 cdef class rkout:
 	'''
 	RKOUT class
@@ -134,8 +127,10 @@ cdef class rkout:
 	Wrapper to manage the output of ODERK.
 	'''
 	cdef RK_OUT rko
+	cdef int nvariables 
 
-	def __cinit__(self):
+	def __cinit__(self,nvariables):
+		self.nvariables = nvariables
 		pass
 
 	def __dealloc__(self):
@@ -145,11 +140,17 @@ cdef class rkout:
 	# These operations are slow and costly to do so it is wise just 
 	# to perform them once.
 	@property
+	def retval(self):
+		return self.rko.retval
+	@property
 	def err(self):
 		return self.rko.err
 	@property
 	def x(self):
-		return double1D_to_numpy(rko.x,rko.n)
+		return double1D_to_numpy(self.rko.x,self.rko.n)
+	@property
+	def y(self):
+		return double2D_to_numpy(self.rko.y,self.rko.n,self.nvariables)
 
 
 cdef class odeset:
@@ -162,7 +163,7 @@ cdef class odeset:
 		> eventfcn:  Event function.
 		> outputfcn: Output function.
 	'''
-	cdef RK_PARAM c_rkp 
+	cdef RK_PARAM c_rkp
 
 	def __cinit__(self,double h0=.01,double eps=1.e-8, double epsevf=1.e-4, double minstep=1.e-12,\
 				  double secfact=0.9,double secfact_max=5.,double secfact_min=0.2,\
@@ -180,6 +181,12 @@ cdef class odeset:
 		self.c_rkp.secfact_min = secfact_min
 		self.c_rkp.eventfcn    = NULL #if eventfcn  == None else eventfcn
 		self.c_rkp.outputfcn   = NULL #if outputfcn == None else outputfcn
+
+	def set_h(self,xspan,div=10.):
+		'''
+		Initial and max step based on xspan
+		'''
+		self.c_rkp.h0 = (xspan[1] - xspan[0])/div
 
 	# We can expose every variable here so it can be accessed by python.
 	# These operations are slow and costly to do so it is wise just 
@@ -228,7 +235,7 @@ cdef class odeset:
 		self.c_rkp.secfact_min = secfact_min		
 
 
-def odeRK(str scheme,object fun,double[:] xspan,double[:] y0,odeset params=odeset()):
+def odeRK(object scheme,object fun,double[:] xspan,double[:] y0,odeset params=odeset()):
 	'''
 	RUNGE-KUTTA Integration
 
@@ -270,30 +277,27 @@ def odeRK(str scheme,object fun,double[:] xspan,double[:] y0,odeset params=odese
 		raise ValueError('ERROR! Scheme <%s> not implemented.' % scheme)
 	
 	cdef int n        = len(y0)
-	cdef rkout out    = rkout()
+	cdef rkout out    = rkout(nvariables=n)
 	cdef odefun c_fun = (<odefun *><size_t>ct.addressof(odefun_f(fun)))[0]
 
 	# Run C function
 	out.rko = c_odeRK(scheme.encode('utf-8'),c_fun,&xspan[0],&y0[0],n,&params.c_rkp)
+	cdef int retval = out.retval
+	if retval == 0:
+		raise ValueError('ERROR! Something went wrong during the integration.')
+	if retval == -1:
+		raise ValueError('ERROR! Integration step required under minimum.')
 
-	## PARSE the output of RKO ##
+	# Set output
+	cdef double[:]    x = out.x
+	cdef double[:,:]  y = out.y
+	cdef double     err = out.err
 
-#	# Check error
-#	if (rko.retval == 0): 
-#		raise ValueError('ERROR! Something went wrong during the integration.')
-#	if (rko.retval == -1): 
-#		raise ValueError('ERROR! Integration step required under minimum.')
-#	# Set output
-#	x   = np.fromiter(rko.x,dtype=np.double,count=rko.n+1)
-#	y   = np.fromiter(rko.y,dtype=np.double,count=n*(rko.n+1)).reshape((rko.n+1,n))
-#	err = rko.err
-#	# Return
-#	return x,y,err
-
+	return x,y,err
 
 
 # Convert to a function that python can see
-def CheckTableau(str scheme):
+def CheckTableau(object scheme):
 	'''
 	Check the sanity of the Butcher's Tableau 
 	of a specified Runge-Kutta scheme.
