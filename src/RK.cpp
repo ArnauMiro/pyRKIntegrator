@@ -44,8 +44,8 @@
 		> x: solution x values of size n.
 		> y: solution y values of size n per each variable.
 
-	Arnau Miro, 2018
-	Last rev: 2020
+	Arnau Miro, Elena Terzic 2021
+	Last rev: 2021
 */
 
 #include <cstdlib>
