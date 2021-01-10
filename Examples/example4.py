@@ -8,10 +8,9 @@
 from __future__ import print_function
 
 import numpy as np
-import RungeKutta as rk
+import pyRKIntegrator as rk
 
 import matplotlib
-matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 plt.style.use('ggplot')
 
