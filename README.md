@@ -6,10 +6,10 @@ The code has been optimized under AVX/AVX2 vectorization directives using the In
 
 The default optimization mode is *fast* although it can be changed using the variable **OPTL**, e.g.,
 ```bash
-make OPTL=2 test
+make OPTL=2
 ```
 
-### Runge-Kutta methods
+## Runge-Kutta methods
 
 The Runge-Kutta methods are a family of numerical integrators for ODEs. They require a function so that
 > dydx = f(x,y)
@@ -20,7 +20,7 @@ void odefun(double x, double y[], int n, double dydx[])
 ```
 where *y* and *dydx* have *n* components already allocated. The Runge-Kutta integrator is called as follows
 ```c++
-RK_PARAM rkp = rkdefaults(xspan); // Standard Runge-Kutta parameters
+RK_PARAM rkp = rkdefaults(xspan);             // Standard Runge-Kutta parameters
 RK_OUT   rko = odeRK(testfun,xspan,y0,n,rkp); // Runge-Kutta integrator
 ```
 where *rkp* contains the ODE integration parameters (see **RK.h**) and *rko* is the output structure containing:
@@ -39,7 +39,7 @@ The available Runge-Kutta schemes are:
 *	Curtis 8(10) (curtis810)
 *	Hiroshi 9(12) (hiroshi912)
 
-### Runge-Kutta-Nystrom methods
+## Runge-Kutta-Nystrom methods
 
 The Runge-Kutta-Nystrom methods are a family of numerical integrators for smooth second order ODEs. They require a function so that
 > dy2dx2 = f(x,y)
@@ -59,36 +59,35 @@ The available Runge-Kutta-Nystrom schemes are:
 *	Runge-Kutta-Nystrom 6(8) (rkn68)
 *	Runge-Kutta-Nystrom 10(12) (rkn1012)
 
-### The Python interface
+## The Python interface
 
-The Python interface allows using the Runge-Kutta and Runge-Kutta-Nystrom integrators using Python's ctypes. They first require the Runge-Kutta library to be compiled using
+The Python interface allows using the Runge-Kutta and Runge-Kutta-Nystrom integrators using Python's cython. The wrapper can be compiled using
 ```bash
-make RKlib
+make python
 ```
-Note that this will create **RK.so** or **RK.dylib** that must be in the same directory of **RungeKutta.py**. Once this step is done, the API can be safely accessed.
+Note that this will create a **.so** that must be in the same directory of **RungeKutta.py**. Otherwise, the Python interface is accessed without the speedup of compiled code.
 
 In Python, the Runge-Kutta module should be first using
 ```python
-import RungeKutta as rk
+import pyRKIntegrator as rk
 ```
 The function to integrate must be defined as
 ```python
-def odefun(x,y,n,dydx): # For Runge-Kutta
+def odefun(x,y,n,dydx):  # For Runge-Kutta
 def odefun(x,y,n,dy2dx): # For Runge-Kutta-Nystrom
 ```
 where *y* and *dydx* or *dy2dx* are vectors that have already been allocated (of size *n*). Access to the parameters structure is provided by the **odeset** class:
 ```python
-odeset = rk.odeset() # For Runge-Kutta
-odeset = rk.odesetN() # For Runge-Kutta-Nystrom
+params = rk.odeset()  # For Runge-Kutta and Runge-Kutta-Nystrom
 ```
 This will initiate using default parameters, which can be changed by using key arguments or by modifying the class fields. The access to the integratos is:
 ```python
-x,y,err = rk.odeRK(odefun,xspan,y0,odeset) # For Runge-Kutta
+x,y,err    = rk.odeRK(odefun,xspan,y0,odeset)      # For Runge-Kutta
 x,y,dy,err = rk.odeRKN(odefun,xspan,y0,dy0,odeset) # For Runge-Kutta-Nystrom
 ```
 Examples 1 to 4 include examples of advanced features to use with the integrator.
 
-### Event and output functions
+## Event and output functions
 
 Event detection and output functions are a characteristic of this set of integrators. They can be set using the *RK_PARAM* structure in C++
 ```c++
@@ -98,10 +97,10 @@ rkp.outputfcn = outputfun;
 ```
 or the *odeset* class in Python
 ```python
-odeset = rk.odeset(eventfcn=eventfun,outputfcn=outputfun)
+odeset = rk.odeset(eventfun=eventfun,outputfun=outputfun)
 ```
 
-##### Output functions
+### Output functions
 
 Output functions allow retrieving the integrated values right after a successful integration step. A value of either *1* or *0* must be returned to continue or stop the integration. The implementation in C++ is
 ```c++
@@ -117,7 +116,7 @@ def outputfun(x,y,n):
 	return 1 # or 0 to stop integration
 ```
 
-##### Event functions
+### Event functions
 
 Event functions allow for solving a problem so that 
 > g(x) - val = 0
