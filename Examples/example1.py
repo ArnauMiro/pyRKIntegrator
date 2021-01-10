@@ -4,14 +4,13 @@
 #			 and different schemes
 #
 # Arnau Miro, 2018
-# Last rev: 2020
-from __future__ import print_function
+# Last rev: 2021
+from __future__ import print_function, division
 
 import numpy as np
-import RungeKutta as rk
+import pyRKIntegrator as rk
 
 import matplotlib
-matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 plt.style.use('ggplot')
 
