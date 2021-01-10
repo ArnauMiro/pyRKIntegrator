@@ -90,33 +90,37 @@ cdef extern from "RK.h":
 
 ctypedef void (*odefun)(double,double*,int,double*)
 odefun_f = ct.CFUNCTYPE(None, ct.c_double, ct.POINTER(ct.c_double), ct.c_int, ct.POINTER(ct.c_double))
-ctypedef int  (*eventfcn)(double,double*,int,double*,int*)
-event_f    = ct.CFUNCTYPE(ct.c_int, ct.c_double, ct.POINTER(ct.c_double), ct.c_int, ct.POINTER(ct.c_double), ct.POINTER(ct.c_int))
-ctypedef int  (*outputfcn)(double,double*,int) 
-output_f   = ct.CFUNCTYPE(ct.c_int, ct.c_double, ct.POINTER(ct.c_double), ct.c_int)
 
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
 @cython.nonecheck(False)
-cdef double[:] double1D_to_numpy(double *cdouble,int n):
+cdef np.ndarray[np.double_t,ndim=1] double1D_to_numpy(double *cdouble,int n):
 	'''
 	Convert a 1D C double pointer into a numpy array
 	'''
-	cdef int ii
 	cdef np.ndarray[np.double_t,ndim=1] out = np.zeros((n,),np.double)
 	memcpy(&out[0],cdouble,n*sizeof(double))
 	return out
 
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False)  # turn off negative index wrapping for entire function
+@cython.nonecheck(False)
+cdef np.ndarray[np.int_t,ndim=1] int1D_to_numpy(int *cint,int n):
+	'''
+	Convert a 1D C integer pointer into a numpy array
+	'''
+	cdef np.ndarray[np.int_t,ndim=1] out = np.zeros((n,),np.int)
+	memcpy(&out[0],cint,n*sizeof(int))
+	return out
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
 @cython.nonecheck(False)
-cdef double[:,:] double2D_to_numpy(double *cdouble, int n, int m):
+cdef np.ndarray[np.double_t,ndim=2] double2D_to_numpy(double *cdouble, int n, int m):
 	'''
 	Convert a 2D C double pointer into a numpy array
 	'''
-	cdef int ii
 	cdef np.ndarray[np.double_t,ndim=2] out = np.zeros((n,m),np.double)
 	memcpy(&out[0,0],cdouble,n*m*sizeof(double))
 	return out
@@ -155,6 +159,22 @@ cdef class rkout:
 		return double2D_to_numpy(self.rko.y,self.rko.n,self.nvariables).copy()
 
 
+cdef int eventfun_wrapper(double t,double* y,int n,double* value,int* direction):
+	global wrap_eventfun
+	cdef np.ndarray[np.double_t,ndim=1] _y      = double1D_to_numpy(y,n)
+	cdef np.ndarray[np.double_t,ndim=1] _value  = double1D_to_numpy(value,n)
+	cdef np.ndarray[np.int_t,ndim=1] _direction = int1D_to_numpy(direction,n)
+	cdef int retval = wrap_eventfun(t,_y,n,_value,_direction)
+	memcpy(value,&_value[0],n*sizeof(double))
+	memcpy(direction,&_direction[0],n*sizeof(int))
+	return retval
+
+cdef int outputfun_wrapper(double t,double *y,int n):
+	global wrap_outputfun
+	cdef np.ndarray[np.double_t,ndim=1] _y = double1D_to_numpy(y,n)
+	return wrap_outputfun(t,_y,n)
+
+
 cdef class odeset:
 	'''
 	ODESET class
@@ -173,8 +193,7 @@ cdef class odeset:
 		'''
 		Class constructor
 		'''
-		cdef eventfcn  c_eventfun  = NULL
-		cdef outputfcn c_outputfun = NULL
+		global wrap_outputfun, wrap_eventfun
 		# odeRK variables
 		self.c_rkp.h0          = h0
 		self.c_rkp.eps         = eps
@@ -183,14 +202,15 @@ cdef class odeset:
 		self.c_rkp.secfact     = secfact
 		self.c_rkp.secfact_max = secfact_max
 		self.c_rkp.secfact_min = secfact_min
+		self.c_rkp.eventfcn     = NULL
+		self.c_rkp.outputfcn    = NULL
 
-		if not eventfun == None: 
-			c_eventfun  = (<eventfcn *><size_t>ct.addressof(event_f(eventfun)))[0]
+		if not eventfun == None:
+			wrap_eventfun       = eventfun
+			self.c_rkp.eventfcn = &eventfun_wrapper
 		if not outputfun == None:
-			c_outputfun = (<outputfcn *><size_t>ct.addressof(output_f(outputfun)))[0]
-
-		self.c_rkp.eventfcn  = c_eventfun 
-		self.c_rkp.outputfcn = c_outputfun 
+			wrap_outputfun       = outputfun
+			self.c_rkp.outputfcn = &outputfun_wrapper 
 
 	def set_h(self,xspan,div=10.):
 		'''
@@ -299,9 +319,9 @@ def odeRK(object scheme,object fun,double[:] xspan,double[:] y0,odeset params=od
 		raise ValueError('ERROR! Integration step required under minimum.')
 
 	# Set output
-	cdef double[:]    x = out.x
-	cdef double[:,:]  y = out.y
-	cdef double     err = out.err
+	cdef np.ndarray[np.double_t,ndim=1] x = out.x
+	cdef np.ndarray[np.double_t,ndim=2] y = out.y
+	cdef double                       err = out.err
 
 	return x,y,err
 
