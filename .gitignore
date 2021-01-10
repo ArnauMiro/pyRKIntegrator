@@ -3,6 +3,15 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+RungeKutta.c
+RungeKutta.cpp
+RungeKutta.html
+
+Examples/*.o
+bin/
+include/
+src/*.o
+
 # C extensions
 *.so
 

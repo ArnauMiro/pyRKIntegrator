@@ -36,6 +36,7 @@ INC_PATH     = $(INSTALL_PATH)/include
 #
 # Automatically detect if the intel compilers are installed and use
 # them, otherwise default to the GNU compilers
+PYTHON = python
 ifeq ($(FORCE_GCC),ON) 
 	# Forcing the use of GCC
 	# C Compiler
@@ -125,10 +126,9 @@ DFLAGS =
 
 # Paths to the various libraries to compile
 #
-RK_PATH   = src/RK
+RK_PATH   = src/
 RK_OBJS   = $(patsubst %.cpp,%.o,$(wildcard $(RK_PATH)/*.cpp))
 RK_INCL   = $(wildcard $(RK_PATH)/*.h)
-PYTH_PATH = src/Python
 
 
 # Targets
@@ -156,19 +156,19 @@ paths:
 examples: example1 example2 example3 example4 example5
 	@echo ""
 	@echo "Examples compiled successfully"
-example1: src/example1.o
+example1: Examples/example1.o
 	$(CXX) $(CXXFLAGS) -o $@ $< -lRK -L$(LIBS_PATH)
 	@mv $@ $(BIN_PATH)
-example2: src/example2.o
+example2: Examples/example2.o
 	$(CXX) $(CXXFLAGS) -o $@ $< -lRK -L$(LIBS_PATH)
 	@mv $@ $(BIN_PATH)
-example3: src/example3.o
+example3: Examples/example3.o
 	$(CXX) $(CXXFLAGS) -o $@ $< -lRK -L$(LIBS_PATH)
 	@mv $@ $(BIN_PATH)
-example4: src/example4.o
+example4: Examples/example4.o
 	$(CXX) $(CXXFLAGS) -o $@ $< -lRK -L$(LIBS_PATH)
 	@mv $@ $(BIN_PATH)
-example5: src/example5.o
+example5: Examples/example5.o
 	$(CXX) $(CXXFLAGS) -o $@ $< -lRK -L$(LIBS_PATH)
 	@mv $@ $(BIN_PATH)
 
@@ -194,18 +194,10 @@ includes:
 
 # Python
 #
-python: pypackages
-	@echo ""
+python: setup.py
+	@CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" ${PYTHON} $< build_ext --inplace
 	@echo "Python programs deployed successfully"
-pypackages: pyRK
-	-@mkdir -p ${LIBS_PATH}/site-packages
-	@echo ""
-	@echo "Python libraries installed in <${LIBS_PATH}/site-packages>"
-	@echo "You might want to add this folder to PYTHONPATH"
-pyRK: includes $(LIBRK)
-	@rm -rf ${LIBS_PATH}/site-packages/RungeKutta
-	@rsync -rupE $(PYTH_PATH)/RungeKutta ${LIBS_PATH}/site-packages/
-	@mv ${LIBS_PATH}/$(LIBRK) ${LIBS_PATH}/site-packages/RungeKutta/
+
 
 # Generic object makers
 #
@@ -226,11 +218,15 @@ pyRK: includes $(LIBRK)
 #
 clean:
 	-@rm -f *.o $(wildcard **/*.o) $(wildcard **/*/*.o)
+	-@rm -f *.pyc $(wildcard **/*.pyc) $(wildcard **/*/*.pyc)
+	-@rm -f RungeKutta.c RungeKutta.cpp RungeKutta.html
+	-@rm -rf build __pycache__
 cleanall:  clean 
 	-@rm -rf $(wildcard $(INC_PATH)/*)
 	-@rm -rf $(wildcard $(LIBS_PATH)/*)
 	-@rm -rf $(wildcard $(BIN_PATH)/*)
 uninstall: cleanall
+	-@rm *.so
 	-@rm -rf $(BIN_PATH)
 	-@rm -rf $(LIBS_PATH)
 	-@rm -rf $(INC_PATH)
