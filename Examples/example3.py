@@ -7,10 +7,9 @@
 from __future__ import print_function
 
 import numpy as np
-import RungeKutta as rk
+import pyRKIntegrator as rk
 
 import matplotlib
-matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 plt.style.use('ggplot')
@@ -65,10 +64,10 @@ y0 = np.array([R0,0,0,0,V0,0,0,0,0,0,0,0], np.double)
 odeset = rk.odeset(h0=24.*3600.,eps=1e-6)
 
 # Create plot figures
-plt.figure(num=1,figsize=(8,6),dpi=100,facecolor='w',edgecolor='k')
-ax1 = plt.subplot(2,1,1,projection='3d')
+plt.figure(num=1,figsize=(12,6),dpi=100,facecolor='w',edgecolor='k')
+ax1 = plt.subplot(1,2,1,projection='3d')
 ax1.set_title('Orbit')
-ax2 = plt.subplot(2,1,2)
+ax2 = plt.subplot(1,2,2)
 ax2.set_title('Energy')
 ax2.set_xlabel('time (days)')
 ax2.set_ylabel('Ek')

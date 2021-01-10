@@ -8,10 +8,9 @@
 from __future__ import print_function
 
 import numpy as np
-import RungeKutta as rk
+import pyRKIntegrator as rk
 
 import matplotlib
-matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 plt.style.use('ggplot')
 
@@ -89,7 +88,7 @@ y0    = np.array([v0, h0], np.double)
 
 # Use the odeset to generate the integrator
 # parameters structure
-odeset = rk.odeset(eventfcn=stoponzero,outputfcn=printvalues) # initalize with basic parameters
+odeset = rk.odeset(eventfun=stoponzero,outputfun=printvalues) # initalize with basic parameters
 odeset.set_h(tspan)  # set defaults for h0 and hmin
 
 # Launch the integrator
