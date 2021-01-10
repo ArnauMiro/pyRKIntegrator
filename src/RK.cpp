@@ -270,20 +270,12 @@ RK_OUT odeRKN(const char *scheme, void (*odefun)(double,double*,int,double*),
 	std::memcpy(y.data()+n*rko.n,y0,n*sizeof(double));
 	std::memcpy(dy.data()+n*rko.n,dy0,n*sizeof(double));
 
-	// Check for event functions
-	int dir[1],    hasEventF = 0;
-	double val[1], g_ant = 0.;
-	if (rkp->eventfcn) {
-		// Evaluate the event function once
-		int ccont = rkp->eventfcn(xspan[0],y0,n,val,dir);
-		hasEventF = (ccont == -10) ? 0 : 1;
-	}
-
 	// Vector containing the derivatives
 	std::vector<double> f(n*rkm.nstep,0.), f2(n*rkm.nstep,0.);
 
 	// Definitions
-	double ylow[n], yhigh[n], dylow[n], dyhigh[n], dy2dx[n];
+	int dir[1];
+	double ylow[n], yhigh[n], dylow[n], dyhigh[n], dy2dx[n], val[1], g_ant = 0.;
 
 	// Runge-Kutta loop
 	while(cont) {
@@ -360,7 +352,7 @@ RK_OUT odeRKN(const char *scheme, void (*odefun)(double,double*,int,double*),
 		double hest = rkp->secfact * h * std::pow(rkp->eps/error,0.7/rkm.alpha);
 
 		// Event function
-		if (hasEventF) {
+		if (rkp->eventfcn) {
 			// Run event function
 			int ccont = rkp->eventfcn(x[rko.n],yhigh,n,val,dir);
 			// Naive approximation to a root finding algorithm
@@ -394,8 +386,8 @@ RK_OUT odeRKN(const char *scheme, void (*odefun)(double,double*,int,double*),
 			std::memcpy(dy.data()+n*rko.n,dyhigh,n*sizeof(double));
 
 			// Output function
-//			if (rkp->outputfcn)
-//				cont = (cont == 1) ? rkp->outputfcn(x[rko.n-1],yhigh,n) : 0;
+			if (rkp->outputfcn)
+				cont = (cont == 1) ? rkp->outputfcn(x[rko.n-1],yhigh,n) : 0;
 
 			// Set the new step
 			// Source: Ketcheson, David, and Umair bin Waheed. 

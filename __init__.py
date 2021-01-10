@@ -74,6 +74,6 @@ RKN_SCHEMES = ['rkn34',
 
 ## IMPORTS ##
 from .RungeKutta import odeset, CheckTableau
-from .RungeKutta import odeRK, ode23, ode45
+from .RungeKutta import odeRK, ode23, ode45, odeRKN
 
 del RungeKutta

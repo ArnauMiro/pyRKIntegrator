@@ -51,7 +51,7 @@
 #from __future__ import print_function, division
 
 import numpy as np, ctypes as ct
-from . import RK_SCHEMES
+from . import RK_SCHEMES, RKN_SCHEMES
 
 cimport numpy as np
 cimport cython
@@ -82,6 +82,9 @@ cdef extern from "RK.h":
 	# Expose the Runge-Kutta basic integrator
 	cdef RK_OUT c_odeRK "odeRK" (const char *scheme, void (*odefun)(double,double*,int,double*),
 		double xspan[2], double y0[], const int n, const RK_PARAM *rkp)
+	# Expose the Runge-Kutta-Nystrom integrator
+	RK_OUT c_odeRKN "odeRKN"(const char *scheme, void (*odefun)(double,double*,int,double*),
+		double xspan[2], double y0[], double dy0[], const int n, const RK_PARAM *rkp);
 	# Expose the free rkout
 	cdef void freerkout(const RK_OUT *rko)
  	# Expose the check tableau
@@ -157,6 +160,9 @@ cdef class rkout:
 	@property
 	def y(self):
 		return double2D_to_numpy(self.rko.y,self.rko.n,self.nvariables).copy()
+	@property
+	def dy(self):
+		return double2D_to_numpy(self.rko.dy,self.rko.n,self.nvariables).copy()
 
 
 cdef int eventfun_wrapper(double t,double* y,int n,double* value,int* direction):
@@ -325,7 +331,6 @@ def odeRK(object scheme,object fun,double[:] xspan,double[:] y0,odeset params=od
 
 	return x,y,err
 
-
 def ode23(object fun,double[:] xspan,double[:] y0,odeset params=odeset()):
 	'''
 	ODE23
@@ -354,7 +359,6 @@ def ode23(object fun,double[:] xspan,double[:] y0,odeset params=odeset()):
 	'''
 	return odeRK("bogackishampine23",fun,xspan,y0,params)
 
-
 def ode45(object fun,double[:] xspan,double[:] y0,odeset params=odeset()):
 	'''
 	ODE45
@@ -382,6 +386,65 @@ def ode45(object fun,double[:] xspan,double[:] y0,odeset params=odeset()):
 		> err: Maximum error achieved.
 	'''
 	return odeRK("dormandprince45",fun,xspan,y0,params)
+
+
+def odeRKN(object scheme,object fun,double[:] xspan,double[:] y0,double[:] dy0,odeset params=odeset()):
+	'''
+	RUNGE-KUTTA-NYSTROM Integration
+
+	Numerical integration using Runge-Kutta-Nystrom methods, implemented
+	based on MATLAB's ode45.
+
+	The function to call is ODERKN, a generic Runge-Kutta-Nystrom variable step integrator.
+
+	The inputs of this function are:
+		> scheme: Runge-Kutta-Nystrom scheme to use. Options are:
+			* RKN 3(4)   (rkn34)
+			* RKN 6(8)   (rkn68)
+			* RKN 10(12) (rkn1012)
+		> odefun: a function so that
+			dy2dx = odefun(x,y,n)
+		where n is the number of y variables to integrate.
+		> xspan: integration start and end point.
+		> y0: initial conditions (must be size n).
+		> dy0: initial conditions for the fist derivative (must be size n).
+
+		An additional parameter can be passed to the integrator, which contains
+		parameters for the integrator:
+			> h0:     Initial step for the interval
+			> eps:    Tolerance to meet.
+			> eventfcn: Event function.
+			> outputfcn: Output function.
+
+	The function will return:
+		> x:  solution x values of size n.
+		> y:  solution y values of size n per each variable.
+		> dy: solution dy values of size n per each variable.
+		> err: Maximum error achieved.
+	'''
+	if not scheme.lower() in RKN_SCHEMES:
+		raise ValueError('ERROR! Scheme <%s> not implemented.' % scheme)
+	
+	cdef int n        = len(y0)
+	cdef rkout out    = rkout(nvariables=n)
+	cdef odefun c_fun = (<odefun *><size_t>ct.addressof(odefun_f(fun)))[0]
+
+	# Run C function
+	out.rko = c_odeRKN(scheme.encode('utf-8'),c_fun,&xspan[0],&y0[0],&dy0[0],n,&params.c_rkp)
+	cdef int retval = out.retval
+	if retval == 0:
+		raise ValueError('ERROR! Something went wrong during the integration.')
+	if retval == -1:
+		raise ValueError('ERROR! Integration step required under minimum.')
+
+	# Set output
+	cdef np.ndarray[np.double_t,ndim=1] x  = out.x
+	cdef np.ndarray[np.double_t,ndim=2] y  = out.y
+	cdef np.ndarray[np.double_t,ndim=2] dy = out.dy
+	cdef double                       err = out.err
+
+	# Return
+	return x,y,dy,err
 
 
 # Convert to a function that python can see
