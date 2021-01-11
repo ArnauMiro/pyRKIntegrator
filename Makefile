@@ -144,7 +144,7 @@ endif
 # One rule to bring them all and in the compiler link them.
 all: paths libs examples python
 	@echo ""
-	@echo "CFD tools deployed successfully"
+	@echo "pyRKIntegrator deployed successfully"
 
 # Paths
 #
