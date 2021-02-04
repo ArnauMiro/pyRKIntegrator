@@ -102,7 +102,7 @@ RK_OUT odeRK(const char *scheme, void (*odefun)(double,double*,int,double*),
 
 	// Check tableau
 	#ifdef RK_CHECK_TABLEAU
-	printf("Checking tableau for %s...",scheme);
+	std::printf("Checking tableau for %s...",scheme);
 	if (!rkm.CheckTableau()) {cont = 0;rko.retval = -1;}
 	#endif
 
@@ -119,7 +119,7 @@ RK_OUT odeRK(const char *scheme, void (*odefun)(double,double*,int,double*),
 		if (x[rko.n]+h > xspan[1]) {
 			cont = 0; last = 1;
 			// Arrange the step so it finishes at xspan[1]
-			h = fabs(x[rko.n] - xspan[1]);
+			h = std::fabs(x[rko.n] - xspan[1]);
 		}
 
 		// Initialize
@@ -152,20 +152,19 @@ RK_OUT odeRK(const char *scheme, void (*odefun)(double,double*,int,double*),
 
 		// Compute the total error
 		// Work with both relative and absolute errors
-		double error = 0., rel_err = 0., abs_err = 0.;
+		double error = 1.e-20, rel_err = 1.e-20, abs_err = 1.e-20; // Avoid division by zero
 		#pragma nounroll
 		for (int kk = 0; kk < n; kk++) {
-			rel_err = fabs(1.-ylow[kk]/yhigh[kk]) > rel_err ? fabs(1.-ylow[kk]/yhigh[kk]) : rel_err;
-			abs_err = fabs(yhigh[kk]-ylow[kk])    > abs_err ? fabs(yhigh[kk]-ylow[kk])    : abs_err;
+			rel_err = std::fmax(std::fabs(1.-ylow[kk]/yhigh[kk]),rel_err);
+			abs_err = std::fmax(std::fabs(yhigh[kk]-ylow[kk]),abs_err);
 		}
-		error = fmin(rel_err,abs_err);
+		error = std::fmin(rel_err,abs_err);
 
 		// Step size control
 		// Source: Ketcheson, David, and Umair bin Waheed. 
 		//         "A comparison of high-order explicit Runge–Kutta, extrapolation, and deferred correction methods in serial and parallel." 
 		//         Communications in Applied Mathematics and Computational Science 9.2 (2014): 175-200.
 		double hest = rkp->secfact * h * std::pow(rkp->eps/error,0.7/rkm.alpha);
-
 		// Event function
 		if (rkp->eventfcn) {
 			// Run event function
@@ -177,8 +176,8 @@ RK_OUT odeRK(const char *scheme, void (*odefun)(double,double*,int,double*),
 			}
 			// Update continue according to the output of the
 			// event function
-			cont  = (fabs(val[0]) < rkp->epsevf) ? ccont : cont;
-			g_ant = (fabs(val[0]) < rkp->epsevf) ? 0 : val[0]; // Also restart g_ant
+			cont  = (std::fabs(val[0]) < rkp->epsevf) ? ccont : cont;
+			g_ant = (std::fabs(val[0]) < rkp->epsevf) ? 0 : val[0]; // Also restart g_ant
 		}
 
 		if (error < rkp->eps || last) {
@@ -208,7 +207,7 @@ RK_OUT odeRK(const char *scheme, void (*odefun)(double,double*,int,double*),
 			// Source: Ketcheson, David, and Umair bin Waheed. 
 			//         "A comparison of high-order explicit Runge–Kutta, extrapolation, and deferred correction methods in serial and parallel." 
 			//         Communications in Applied Mathematics and Computational Science 9.2 (2014): 175-200.
-			h = fmin(rkp->secfact_max*h,fmax(rkp->secfact_min*h,hest));
+			h = std::fmin(rkp->secfact_max*h,std::fmax(rkp->secfact_min*h,hest));
 			//h = fmax(h,hest);
 		} else {
 			// This is a failed step
@@ -333,25 +332,22 @@ RK_OUT odeRKN(const char *scheme, void (*odefun)(double,double*,int,double*),
 
 		// Compute the total error
 		// Work with both relative and absolute errors
-		double error = 0., rel_err[2] = {0.,0.}, abs_err[2] = {0.,0.};
+		double error = 1.e-20, rel_err[2] = {1.e-20,1.e-20}, abs_err[2] = {1.e-20,1.e-20};
 		//#pragma nounroll
 		#pragma simd vecremainder
 		#pragma loop_count min(1), max(20), avg(6)
 		for (int kk = 0; kk < n; kk++) {
-			rel_err[0] = fabs(1.-dylow[kk]/dyhigh[kk]) > rel_err[0] ? fabs(1.-dylow[kk]/dyhigh[kk]) : rel_err[0];
-			rel_err[1] = fabs(1.-ylow[kk]/yhigh[kk])   > rel_err[1] ? fabs(1.-ylow[kk]/yhigh[kk])   : rel_err[1];
-			abs_err[0] = fabs(dyhigh[kk]-dylow[kk])    > abs_err[0] ? fabs(dyhigh[kk]-dylow[kk])    : abs_err[0];
-			abs_err[1] = fabs(yhigh[kk]-ylow[kk])      > abs_err[1] ? fabs(yhigh[kk]-ylow[kk])      : abs_err[1];
+			rel_err[0] = std::fmax(std::fabs(1.-dylow[kk]/dyhigh[kk]), rel_err[0]);
+			rel_err[1] = std::fmax(std::fabs(1.-ylow[kk]/yhigh[kk])  , rel_err[1]);
+			abs_err[0] = std::fmax(std::fabs(dyhigh[kk]-dylow[kk])   , abs_err[0]);
+			abs_err[1] = std::fmax(std::fabs(yhigh[kk]-ylow[kk])     , abs_err[1]);
 		}
-		error = fmin(fmax(rel_err[0],rel_err[1]),fmax(abs_err[0],abs_err[1]));
-
+		error = std::fmin(std::fmax(rel_err[0],rel_err[1]),fmax(abs_err[0],abs_err[1]));
 		// Step size control
 		// Source: Ketcheson, David, and Umair bin Waheed. 
 		//         "A comparison of high-order explicit Runge–Kutta, extrapolation, and deferred correction methods in serial and parallel." 
 		//         Communications in Applied Mathematics and Computational Science 9.2 (2014): 175-200.
 		double hest = rkp->secfact * h * std::pow(rkp->eps/error,0.7/rkm.alpha);
-
-		// Event function
 		if (rkp->eventfcn) {
 			// Run event function
 			int ccont = rkp->eventfcn(x[rko.n],yhigh,n,val,dir);
@@ -362,8 +358,8 @@ RK_OUT odeRKN(const char *scheme, void (*odefun)(double,double*,int,double*),
 			}
 			// Update continue according to the output of the
 			// event function
-			cont  = (fabs(val[0]) < rkp->epsevf) ? ccont : cont;
-			g_ant = (fabs(val[0]) < rkp->epsevf) ? 0 : val[0]; // Also restart g_ant
+			cont  = (std::fabs(val[0]) < rkp->epsevf) ? ccont : cont;
+			g_ant = (std::fabs(val[0]) < rkp->epsevf) ? 0 : val[0]; // Also restart g_ant
 		}
 
 		if (error < rkp->eps || last) {
@@ -393,7 +389,7 @@ RK_OUT odeRKN(const char *scheme, void (*odefun)(double,double*,int,double*),
 			// Source: Ketcheson, David, and Umair bin Waheed. 
 			//         "A comparison of high-order explicit Runge–Kutta, extrapolation, and deferred correction methods in serial and parallel." 
 			//         Communications in Applied Mathematics and Computational Science 9.2 (2014): 175-200.
-			h = fmin(rkp->secfact_max*h,fmax(rkp->secfact_min*h,hest));
+			h = std::fmin(rkp->secfact_max*h,std::fmax(rkp->secfact_min*h,hest));
 			//h = fmax(h,hest);
 		} else {
 			// This is a failed step
