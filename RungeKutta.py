@@ -89,7 +89,6 @@ class odeset():
 		self.h0 = (xspan[1] - xspan[0])/div
 
 
-
 def odeRK(scheme,fun,xspan,y0,params=odeset()):
 	'''
 	RUNGE-KUTTA Integration
@@ -138,18 +137,18 @@ def odeRK(scheme,fun,xspan,y0,params=odeset()):
 	rkm = RKMethod(scheme)
 	
 	# Initialization
-	cont, last = 1, 0
+	cont, last = True, False
 	h = params.h0
 	retval = 0
 	dim = len(y0)
 	
 	# Create temporary arrays to store the output
 	x = np.zeros((NNSTEP,), dtype=np.double)
-	y = np.zeros((NNSTEP, dim), dtype=np.double)
+	y = np.zeros((NNSTEP,dim), dtype=np.double)
 	
-	n = 0 # Start at iteration zero
-	err = 0.
-	x[n] = xspan[0]
+	n      = 0 # Start at iteration zero
+	err    = 0.
+	x[n]   = xspan[0]
 	y[n,:] = y0
 		
 	# Vector containing the derivatives
@@ -157,9 +156,9 @@ def odeRK(scheme,fun,xspan,y0,params=odeset()):
 	
 	# Definitions
 	# int dir[1]
-	ylow = np.zeros((dim,), dtype=np.double)
-	yhigh = np.zeros((dim,), dtype=np.double)
-	dydx = np.zeros((dim,), dtype=np.double)
+#	ylow  = np.zeros((dim,), dtype=np.double)
+#	yhigh = np.zeros((dim,), dtype=np.double)
+	dydx  = np.zeros((dim,), dtype=np.double)
 	# val = 0
 	# g_ant = 0.
 	
@@ -167,42 +166,38 @@ def odeRK(scheme,fun,xspan,y0,params=odeset()):
 	while cont:
 		# Exit criteria
 		if x[n] + h > xspan[1]:
-			cont, last = 0, 1
+			cont, last = False, True
 			# Arrange the step so it finishes at xspan[1]
 			h = abs(x[n] - xspan[1])
 			
 		# Initialize
-		ylow = y[n,:]
-		yhigh = y[n,:]
+		ylow  = y[n,:].copy()
+		yhigh = y[n,:].copy()
 		
 		# Calculus loop
 		for ii in range(rkm.nstep):
 			xint = x[n] + h * rkm.C[ii]
-			yint = y[n,:]
+			yint = y[n,:].copy()
 			
 			for kk in range(dim):
 				for jj in range(ii):
-					# Possible rearrange to matrix: A
-					yint[kk] += rkm.A[ii, jj] * f[jj,kk]
+					yint[kk] += rkm.A[ii,jj] * f[jj,kk]
 					
 			# Call function
 			fun(xint, yint, dim, dydx)
-			
+
 			# Update dydx and compute solutions
-			for kk in range(dim):
-				f[ii,kk] = h * dydx[kk]
-				ylow[kk] += rkm.Bhat[ii] * f[ii,kk]
-				yhigh[kk] += rkm.B[ii] * f[ii,kk]
-				
+			f[ii,:]   = h * dydx
+			ylow[:]  += rkm.Bhat[ii] * f[ii,:]
+			yhigh[:] += rkm.B[ii] * f[ii,:]
+
 		# Compute the total error
 		# Work with both relative and absolute errors
-		error, rel_err, abs_err = 1e-20, 1e-20, 1e-20
-		for kk in range(dim):
-			rel_err = abs(1.-ylow[kk]/yhigh[kk]) if abs(1. - ylow[kk]/yhigh[kk]) > rel_err else rel_err
-			abs_err = abs(yhigh[kk]-ylow[kk]) if abs(yhigh[kk]-ylow[kk]) > abs_err else abs_err
+		rel_err = np.max(np.abs(1.-ylow/yhigh))
+		abs_err = np.max(np.abs(yhigh-ylow))
 			
-		error = min(rel_err,abs_err)
-		
+		error = max(1e-20,min(rel_err,abs_err)) # Avoid division by zero
+
 		# Step size control
 		# Source: Ketcheson, David, and Umair bin Waheed. 
 		#         "A comparison of high-order explicit Runge-Kutta, extrapolation, and deferred correction methods in serial and parallel." 
@@ -212,13 +207,14 @@ def odeRK(scheme,fun,xspan,y0,params=odeset()):
 		# Event function
 		if params.eventfcn:
 			# do stuff
+			#ACABAR!!
 			pass
 		
 		if error < params.eps or last:
 			# This is a successful step
 			retval = 1 if retval <= 0 else retval
-			err = error if error > err else err
-			n += 1
+			err    = max(error,err)
+			n     += 1
 			
 			# Reallocate
 			if n % NNSTEP == 0:
@@ -226,12 +222,12 @@ def odeRK(scheme,fun,xspan,y0,params=odeset()):
 				y = np.vstack([y, np.zeros((NNSTEP, dim), dtype=np.double)])
 				
 			# Set output values
-			x[n] = x[n-1] + h
+			x[n]   = x[n-1] + h
 			y[n,:] = yhigh
 			
 			# Output function
 			if params.outputfcn:
-				cont = params.outputfcn(x[n-1], yhigh, dim) if cont == 1 else 0
+				cont = bool(params.outputfcn(x[-1], yhigh, dim)) if cont else False
 			
 			# Set the new step
 			# Source: Ketcheson, David, and Umair bin Waheed. 
@@ -244,7 +240,7 @@ def odeRK(scheme,fun,xspan,y0,params=odeset()):
 			# This is a failed step
 			if h < hmin:
 				# Check if our step has decreased too much
-				cont, retval = 0, -1
+				cont, retval = False, -1
 			else:
 				h = hest
 
@@ -254,7 +250,7 @@ def odeRK(scheme,fun,xspan,y0,params=odeset()):
 	if retval == -1:
 		raise ValueError('ERROR! Integration step required under minimum.')
 
-	return x, y, err
+	return x[:n], y[:n,:], err
 
 def ode23(fun,xspan,y0,params=odeset()):
 	'''
@@ -1831,8 +1827,3 @@ class RKMethod():
 def CheckTableau(scheme):
 	rk = RKMethod(scheme)
 	return rk.CheckTableau()
-		
-if __name__ == '__main__':
-	a = RKMethod('bogackishampine23')
-		
-#	return 
