@@ -184,7 +184,7 @@ RK_OUT odeRK(const char *scheme, void (*odefun)(double,double*,int,double*),
 
 			// This is a successful step
 			rko.retval = (rko.retval <= 0) ? 1 : rko.retval;
-			rko.err = (error > rko.err) ? error : rko.err;
+			rko.err    = std::max(error,rko.err);
 			rko.n++;
 
 			// Reallocate
