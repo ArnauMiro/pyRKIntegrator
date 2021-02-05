@@ -88,53 +88,6 @@ class odeset():
 		'''
 		self.h0 = (xspan[1] - xspan[0])/div
 
-	# We can expose every variable here so it can be accessed by python.
-	# These operations are slow and costly to do so it is wise just 
-	# to perform them once.
-	'''
-	@property
-	def h0(self):
-		return self.h0
-	@h0.setter
-	def h0(self, h0):
-		self.h0 = h0
-	@property
-	def eps(self):
-		return self.eps
-	@eps.setter
-	def eps(self, eps):
-		self.eps = eps
-	@property
-	def epsevf(self):
-		return self.epsevf
-	@epsevf.setter
-	def epsevf(self, epsevf):
-		self.epsevf = epsevf
-	@property
-	def minstep(self):
-		return self.minstep
-	@minstep.setter
-	def minstep(self, minstep):
-		self.minstep = minstep
-	@property
-	def secfact(self):
-		return self.secfact
-	@secfact.setter
-	def secfact(self, secfact):
-		self.secfact = secfact
-	@property
-	def secfact_max(self):
-		return self.secfact_max
-	@secfact_max.setter
-	def secfact_max(self, secfact_max):
-		self.secfact_max = secfact_max
-	@property
-	def secfact_min(self):
-		return self.secfact_min
-	@secfact_min.setter
-	def secfact_min(self, secfact_min):
-		self.secfact_min = secfact_min	
-		'''	
 
 
 def odeRK(scheme,fun,xspan,y0,params=odeset()):
