@@ -53,6 +53,7 @@ from __future__ import print_function, division
 import numpy as np
 from . import RK_SCHEMES, RKN_SCHEMES
 
+np.seterr(divide='ignore', invalid='ignore')
 NNSTEP = 1000
 
 class odeset():
@@ -155,12 +156,12 @@ def odeRK(scheme,fun,xspan,y0,params=odeset()):
 	f = np.zeros((rkm.nstep, dim), dtype=np.double)
 	
 	# Definitions
-	# int dir[1]
 #	ylow  = np.zeros((dim,), dtype=np.double)
 #	yhigh = np.zeros((dim,), dtype=np.double)
 	dydx  = np.zeros((dim,), dtype=np.double)
-	# val = 0
-	# g_ant = 0.
+	val   = np.zeros((1,), dtype=np.double)
+	dir   = 0
+	g_ant = 0.
 	
 	# Runge-Kutta loop
 	while cont:
@@ -193,8 +194,8 @@ def odeRK(scheme,fun,xspan,y0,params=odeset()):
 
 		# Compute the total error
 		# Work with both relative and absolute errors
-		rel_err = np.max(np.abs(1.-ylow/yhigh))
-		abs_err = np.max(np.abs(yhigh-ylow))
+		rel_err = np.nanmax(np.abs(1.-ylow/yhigh))
+		abs_err = np.nanmax(np.abs(yhigh-ylow))
 			
 		error = max(1e-20,min(rel_err,abs_err)) # Avoid division by zero
 
@@ -206,9 +207,19 @@ def odeRK(scheme,fun,xspan,y0,params=odeset()):
 		
 		# Event function
 		if params.eventfcn:
-			# do stuff
-			#ACABAR!!
-			pass
+			# Run event function
+			ccont = params.eventfcn(x[n],yhigh,dim,val,dir)
+			# Naive approximation to a root finding algorithm
+			# using a crude mid-point rule
+			if (n != 0 and val[0]*g_ant < 0):
+				h   /= 2.
+				cont = True
+				continue
+			
+			# Update continue according to the output of the
+			# event function
+			cont  = bool(ccont) if abs(val[0]) < params.epsevf else cont
+			g_ant = 0 if abs(val[0]) < params.epsevf else val[0] # Also restart g_ant
 		
 		if error < params.eps or last:
 			# This is a successful step
