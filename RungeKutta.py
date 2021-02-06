@@ -139,9 +139,9 @@ def odeRK(scheme,fun,xspan,y0,params=odeset()):
 	
 	# Initialization
 	cont, last = True, False
-	h = params.h0
-	retval = 0
-	dim = len(y0)
+	h 		   = params.h0
+	retval     = 0
+	dim 	   = len(y0)
 	
 	# Create temporary arrays to store the output
 	x = np.zeros((NNSTEP,), dtype=np.double)
@@ -354,25 +354,163 @@ def odeRKN(scheme,fun,xspan,y0,dy0,params=odeset()):
 		> dy: solution dy values of size n per each variable.
 		> err: Maximum error achieved.
 	'''
+	
 	if not scheme.lower() in RKN_SCHEMES:
 		raise ValueError('ERROR! Scheme <%s> not implemented.' % scheme)
 
-	
-	# Implement RKN function from RK.cpp here
-	raise NotImplementedError('To implement!')
+	hmin = abs(xspan[1]-xspan[0]) * params.minstep
 
-	retval = 1
+	# Select Runge-Kutta method
+	rkm = RKMethod(scheme)
+	
+	# Initialization
+	cont, last = True, False
+	h 		   = params.h0
+	retval 	   = 0
+	dim 	   = len(y0)
+	
+	# Create temporary arrays to store the output
+	x  = np.zeros((NNSTEP,), dtype=np.double)
+	y  = np.zeros((NNSTEP,dim), dtype=np.double)
+	dy = np.zeros((NNSTEP,dim), dtype=np.double)
+	
+	n       = 0 # Start at iteration zero
+	err     = 0.
+	x[n]    = xspan[0]
+	y[n,:]  = y0
+	dy[n,:] = dy0
+		
+	# Vector containing the derivatives
+	f  = np.zeros((rkm.nstep, dim), dtype=np.double)
+	f2 = np.zeros((rkm.nstep, dim), dtype=np.double)
+	
+	# Definitions
+#	ylow   = np.zeros((dim,), dtype=np.double)
+#	yhigh  = np.zeros((dim,), dtype=np.double)
+#   dylow  = np.zeros((dim,), dtype=np.double)
+#   dyhigh = np.zeros((dim,), dtype=np.double)
+	dy2dx  = np.zeros((dim,), dtype=np.double)
+	val    = np.zeros((1,), dtype=np.double)
+	dir    = 0
+	g_ant  = 0.
+	
+	# Runge-Kutta loop
+	while cont:
+		# Exit criteria
+		if x[n] + h > xspan[1]:
+			cont, last = False, True
+			# Arrange the step so it finishes at xspan[1]
+			h = abs(x[n] - xspan[1])
+			
+		# Initialize
+		ylow   = y[n,:].copy()
+		yhigh  = y[n,:].copy()
+		dylow  = dy[n,:].copy()
+		dyhigh = dy[n,:].copy()
+		
+		ylow  += h*dylow
+		yhigh += h*dyhigh
+		
+		# Calculus loop
+		for ii in range(rkm.nstep):
+			xint  = x[n] + h * rkm.C[ii]
+			yint  = y[n,:].copy()
+			dyint = dy[n,:].copy()
+			
+			yint += h * rkm.C[ii] * dyint
+			
+			for kk in range(dim):
+				for jj in range(ii):
+					yint[kk] += rkm.A[ii,jj] * f2[jj,kk]
+					
+			# Call function
+			fun(xint, yint, dim, dy2dx)
+
+			# Update dydx and compute solutions
+			f[ii,:]   = h * dy2dx
+			f2[ii,:]  = h * h * dy2dx
+			dylow    += rkm.Bphat[ii] * f[ii,:]
+			dyhigh   += rkm.Bp[ii]    * f[ii,:]
+			ylow[:]  += rkm.Bhat[ii]  * f2[ii,:]
+			yhigh[:] += rkm.B[ii]     * f2[ii,:]
+
+		# Compute the total error
+		# Work with both relative and absolute errors
+		rel_err = max(np.nanmax(np.abs(1.-ylow/yhigh)), np.nanmax(np.abs(1.-dylow/dyhigh)))
+		abs_err = max(np.nanmax(np.abs(yhigh-ylow)), np.nanmax(np.abs(dyhigh-dylow)))
+			
+		error = max(1e-20,min(rel_err,abs_err)) # Avoid division by zero
+
+		# Step size control
+		# Source: Ketcheson, David, and Umair bin Waheed. 
+		#         "A comparison of high-order explicit Runge-Kutta, extrapolation, and deferred correction methods in serial and parallel." 
+		#         Communications in Applied Mathematics and Computational Science 9.2 (2014): 175-200.
+		hest = params.secfact * h * (params.eps/error)**(0.7/rkm.alpha)
+		
+		# Event function
+		if params.eventfcn:
+			# Run event function
+			ccont = params.eventfcn(x[n],yhigh,dim,val,dir)
+			# Naive approximation to a root finding algorithm
+			# using a crude mid-point rule
+			if (n != 0 and val[0]*g_ant < 0):
+				h   /= 2.
+				cont = True
+				continue
+			
+			# Update continue according to the output of the
+			# event function
+			cont  = bool(ccont) if abs(val[0]) < params.epsevf else cont
+			g_ant = 0 if abs(val[0]) < params.epsevf else val[0] # Also restart g_ant
+		
+		if error < params.eps or last:
+			# This is a successful step
+			retval = 1 if retval <= 0 else retval
+			err    = max(error,err)
+			n     += 1
+			
+			# Reallocate
+			if n % NNSTEP == 0:
+				x  = np.hstack([x, np.zeros((NNSTEP,), dtype=np.double)])
+				y  = np.vstack([y, np.zeros((NNSTEP, dim), dtype=np.double)])
+				dy = np.vstack([dy, np.zeros((NNSTEP, dim), dtype=np.double)])
+				
+			# Set output values
+			x[n]    = x[n-1] + h
+			y[n,:]  = yhigh
+			dy[n,:] = dyhigh
+			
+			# Output function
+			if params.outputfcn:
+				cont = bool(params.outputfcn(x[-1], yhigh, dim)) if cont else False
+			
+			# Set the new step
+			# Source: Ketcheson, David, and Umair bin Waheed. 
+			#         "A comparison of high-order explicit Runge-Kutta, extrapolation, and deferred correction methods in serial and parallel." 
+			#         Communications in Applied Mathematics and Computational Science 9.2 (2014): 175-200.
+	
+			h = min(params.secfact_max * h, max(params.secfact_min * h, hest))
+		
+		else:
+			# This is a failed step
+			if h < hmin:
+				# Check if our step has decreased too much
+				cont, retval = False, -1
+			else:
+				h = hest
+
+
 	# Return
 	if retval == 0:
 		raise ValueError('ERROR! Something went wrong during the integration.')
 	if retval == -1:
 		raise ValueError('ERROR! Integration step required under minimum.')
 
-	# return x,y,dy,err
-	return
+	return x[:n], y[:n,:], dy[:n,:], err
 
 class RKMethod():
 	def __init__(self, scheme):
+		# odeRK schemes
 		if scheme == 'eulerheun12':
 			self.EulerHeun12()
 		elif scheme == 'bogackishampine23':
@@ -395,6 +533,15 @@ class RKMethod():
 			self.Curtis810()
 		elif scheme == 'hiroshi912':
 			self.Hiroshi912()
+		# odeRKN schemes
+		elif scheme == 'rkn34':
+			self.RungeKuttaNystrom34()
+		elif scheme == 'rkn46':
+			self.RungeKuttaNystrom46()
+		elif scheme == 'rkn68':
+			self.RungeKuttaNystrom68()
+		elif scheme == 'rkn1012':
+			self.RungeKuttaNystrom1012()
 		else:
 			raise ValueError('ERROR! Scheme <%s> not implemented.' % scheme)
 		return
@@ -1800,6 +1947,487 @@ class RKMethod():
 		self.Bhat[26] = .4265887719284871852244002213010235951116369449606049493109912099005098392090245967637
 		self.Bhat[27] = -.2878025166474501962999477241233861487151201542084751225511851437798538088192303308430
 		self.Bhat[28] = -.1802605391747162424104685269536402054591231988681564193502526144322952773004003407203e-1
+		return
+	
+	def RungeKuttaNystrom34(self):
+		self.nstep = 4
+		self.alpha = 3.
+	
+		# Allocate Butcher's tableau
+		self.C     = np.zeros((self.nstep,), dtype=np.double)
+		self.A     = np.zeros((self.nstep,self.nstep), dtype=np.double)
+		self.B     = np.zeros((self.nstep,), dtype=np.double)
+		self.Bhat  = np.zeros((self.nstep,), dtype=np.double)
+		self.Bp    = np.zeros((self.nstep,), dtype=np.double)
+		self.Bphat = np.zeros((self.nstep,), dtype=np.double)
+	
+		self.alloc = True
+	
+		# C coefficient
+		self.C[0] = 0.0e0
+		self.C[1] = 5280320246./8739982487.
+		self.C[2] = 2488284716./4549257065.
+		self.C[3] = 1.
+	
+		# A matrix
+		self.A[1,0] = 379540831./2079644486.
+		self.A[2,0] = 4090178078./30784316359.
+		self.A[2,1] = 724764885./43347833381.
+		self.A[3,0] = 1382866212./8058611935.
+		self.A[3,1] = -958895179./4232828403.
+		self.A[3,2] = 3246882200./5850906049.
+	
+		# 4th order solution
+		self.B[0] = 1382866212./8058611935.
+		self.B[1] = -958895179./4232828403.
+		self.B[2] = 3246882200./5850906049.
+		self.B[3] = 0.0e0
+	
+		# 3rd order solution
+		self.Bhat[0] = 2788682442./15739802773.
+		self.Bhat[1] = 1966645306./8825920383.
+		self.Bhat[2] = 3./20.
+		self.Bhat[3] = -1./20.
+	
+		# 4th order solution (derivative)
+		self.Bp[0]  = 1382866212./8058611935.
+		self.Bp[1]  = -5103277582./8917268805.
+		self.Bp[2]  = 12283001905./10027502947.
+		self.Bp[3]  = 2640160123./15021458620.
+	
+		# 10th order solution (derivative)
+		self.Bphat[0]  = 1153046258./2574473725.
+		self.Bphat[1]  = 27711564209./4540932828.
+		self.Bphat[2]  = -31509757256./6039640179.
+		self.Bphat[3]  = -1./3.
+		return
+	
+	def RungeKuttaNystrom46(self):
+		self.nstep = 6
+		self.alpha = 4.
+	
+		# Allocate Butcher's tableau
+		self.C     = np.zeros((self.nstep,), dtype=np.double)
+		self.A     = np.zeros((self.nstep,self.nstep), dtype=np.double)
+		self.B     = np.zeros((self.nstep,), dtype=np.double)
+		self.Bhat  = np.zeros((self.nstep,), dtype=np.double)
+		self.Bp    = np.zeros((self.nstep,), dtype=np.double)
+		self.Bphat = np.zeros((self.nstep,), dtype=np.double)
+	
+		self.alloc = True
+	
+		# C coefficient
+		self.C[0] = 0.
+		self.C[1] = 76064096./555208869.
+		self.C[2] = 61651457./172436989.
+		self.C[3] = 473./677.
+		self.C[4] = 1521284172./2494038851.
+		self.C[5] = 1.
+	
+		# A matrix
+		self.A[1,0] = 148104835./15781657211.
+		self.A[2,0] = 83570507./15621004272.
+		self.A[2,1] = 1008730685./17224387836.
+		self.A[3,0] = 313507335./5002407628.
+		self.A[3,1] = 232561219./6632504445.
+		self.A[3,2] = 2487592367./16999280447.
+		self.A[4,0] = 497059253./7416116119.
+		self.A[4,1] = -31814195./4301239521.
+		self.A[4,2] = 666859859./4681708182.
+		self.A[4,3] = -164695106./10269973361.
+		self.A[5,0] = 1104491309./17344385380.
+		self.A[5,1] = 2297852298./21296988487.
+		self.A[5,2] = 1270882233./4862169760.
+		self.A[5,3] = 1745513301./8827769149.
+		self.A[5,4] = -854905921./6541617807.
+	
+		# 6th order solution
+		self.B[0] = 1104491309./17344385380.
+		self.B[1] = 2297852298./21296988487.
+		self.B[2] = 1270882233./4862169760.
+		self.B[3] = 1745513301./8827769149.
+		self.B[4] = -854905921./6541617807.
+		self.B[5] = 0.
+	
+		# 4th order solution
+		self.Bhat[0] = 390850314./4665518297.
+		self.Bhat[1] = 879866760./14012015573.
+		self.Bhat[2] = 1237986347./4111942715.
+		self.Bhat[3] = 1838896521./8824986790.
+		self.Bhat[4] = -1945509358./12470194255.
+		self.Bhat[5] = 0.
+	
+		# 6th order solution (derivative)
+		self.Bp[0] = 1104491309./17344385380.
+		self.Bp[1] = 928753894./7428602053.
+		self.Bp[2] = 1088487657./2675475233.
+		self.Bp[3] = 2281030107./3476164510.
+		self.Bp[4] = -5717085047./17062458528.
+		self.Bp[5] = 1./12.
+		
+		# 4th order solution (derivative)
+		self.Bphat[0]  = 390850314./4665518297.
+		self.Bphat[1]  = 831255784./11424277409.
+		self.Bphat[2]  = 5386054494./11493559817.
+		self.Bphat[3]  = 5380034471./7780066871.
+		self.Bphat[4]  = -2./5.
+		self.Bphat[5]  = 1./12.
+		return
+	
+	def RungeKuttaNystrom68(self):
+		self.nstep = 9
+		self.alpha = 6.
+	
+		# Allocate Butcher's tableau
+		self.C     = np.zeros((self.nstep,), dtype=np.double)
+		self.A     = np.zeros((self.nstep,self.nstep), dtype=np.double)
+		self.B     = np.zeros((self.nstep,), dtype=np.double)
+		self.Bhat  = np.zeros((self.nstep,), dtype=np.double)
+		self.Bp    = np.zeros((self.nstep,), dtype=np.double)
+		self.Bphat = np.zeros((self.nstep,), dtype=np.double)
+	
+		self.alloc = True
+	
+		# C coefficient
+		self.C[0] = 0.0e0
+		self.C[1] = 53510637./572121662.
+		self.C[2] = 357248860./1909448607.
+		self.C[3] = 59418235./171833923.
+		self.C[4] = 504173341./1087994762.
+		self.C[5] = 387843305./481838798.
+		self.C[6] = 862622967./973409174.
+		self.C[7] = 1.
+		self.C[8] = 1.
+	
+		# A matrix
+		self.A[1,0] = 2232527./510224080.
+		self.A[2,0] = 2232527./382668060.
+		self.A[2,1] = 37081334./3177977723.
+		self.A[3,0] = 30566341./1760496148.
+		self.A[3,1] = 8218085./734916954.
+		self.A[3,2] = 20946667./670502569.
+		self.A[4,0] = 8338478./576439607.
+		self.A[4,1] = 261273394./6072168265.
+		self.A[4,2] = 29462594./997634791.
+		self.A[4,3] = 77204245./3795243917.
+		self.A[5,0] = 1100589730./2256756531.
+		self.A[5,1] = -2504085737./1611855801.
+		self.A[5,2] = 7903856905./4158249776.
+		self.A[5,3] = -2746138419./2848012111.
+		self.A[5,4] = 131209591./289472778.
+		self.A[6,0] = -5574225260./1895534583.
+		self.A[6,1] = 18077935161./1758392437.
+		self.A[6,2] = -9350911807./861383162
+		self.A[6,3] = 1948485627./355652546.
+		self.A[6,4] = -736004998./452939571
+		self.A[6,5] = 30627356./562404525.
+		self.A[7,0] = 1325770706./1152764413.
+		self.A[7,1] = -4839505982./1296410665.
+		self.A[7,2] = 3190857006./755292433.
+		self.A[7,3] = -4573493832./2249363015.
+		self.A[7,4] = 1400717651./1651772814.
+		self.A[7,5] = 12114323./331609812.
+		self.A[7,6] = 3175573./456323904.
+		self.A[8,0] = 13093931./251590199.
+		self.A[8,1] = 0.
+		self.A[8,2] = 453730323./1723073015.
+		self.A[8,3] = -174729768./1541576453.
+		self.A[8,4] = 154302939./629373676.
+		self.A[8,5] = 89112923./1899373863.
+		self.A[8,6] = 3795253./644583773.
+		self.A[8,7] = 0.
+	
+		# 8th order solution
+		self.B[0] = 13093931./251590199.
+		self.B[1] = 0.
+		self.B[2] = 453730323./1723073015.
+		self.B[3] = -174729768./1541576453.
+		self.B[4] = 154302939./629373676.
+		self.B[5] = 89112923./1899373863.
+		self.B[6] = 3795253./644583773.
+		self.B[7] = 0.
+		self.B[8] = 0.
+	
+		# 6th order solution
+		self.Bhat[0] = 106709197./1949525980.
+		self.Bhat[1] = 0.
+		self.Bhat[2] = 189148257./765523804.
+		self.Bhat[3] = -85259905./1101513319.
+		self.Bhat[4] = 281276824./1286133115.
+		self.Bhat[5] = 25824341./461156990.
+		self.Bhat[6] = 968741./1095289242.
+		self.Bhat[7] = 0.
+		self.Bhat[8] = 0.
+	
+		# 8th order solution (derivative)
+		self.Bp[0] = 13093931./251590199.
+		self.Bp[1] = 0.
+		self.Bp[2] = 236119875./728916961.
+		self.Bp[3] = -145423380./839364157.
+		self.Bp[4] = 56276012./123171693.
+		self.Bp[5] = 168458860./700436693.
+		self.Bp[6] = 36197530./699693487.
+		self.Bp[7] = 49704941./1032349655.
+		self.Bp[8] = 0.
+	
+		# 6th order solution (derivative)
+		self.Bphat[0] = 106709197./1949525980.
+		self.Bphat[1] = 0.
+		self.Bphat[2] = 463818847./1525964332.
+		self.Bphat[3] = -379038881./3203661980.
+		self.Bphat[4] = 461048333./1131231912.
+		self.Bphat[5] = 203285488./708159667.
+		self.Bphat[6] = 10565889./1359619685.
+		self.Bphat[7] = -146565653./1579900056.
+		self.Bphat[8] = 3./20.
+		return
+	
+	def RungeKuttaNystrom1012(self):
+		self.nstep = 17
+		self.alpha = 10.
+	
+		# Allocate Butcher's tableau
+		self.C     = np.zeros((self.nstep,), dtype=np.double)
+		self.A     = np.zeros((self.nstep,self.nstep), dtype=np.double)
+		self.B     = np.zeros((self.nstep,), dtype=np.double)
+		self.Bhat  = np.zeros((self.nstep,), dtype=np.double)
+		self.Bp    = np.zeros((self.nstep,), dtype=np.double)
+		self.Bphat = np.zeros((self.nstep,), dtype=np.double)
+	
+		self.alloc = True
+	
+		# C coefficient
+		self.C[0]  = 0.0e0
+		self.C[1]  = 2.0e-2
+		self.C[2]  = 4.0e-2
+		self.C[3]  = 1.0e-1
+		self.C[4]  = 1.33333333333333333333333333333e-1
+		self.C[5]  = 1.6e-1
+		self.C[6]  = 5.0e-2
+		self.C[7]  = 2.0e-1
+		self.C[8]  = 2.5e-1
+		self.C[9]  = 3.33333333333333333333333333333e-1
+		self.C[10] = 5.0e-1
+		self.C[11] = 5.55555555555555555555555555556e-1
+		self.C[12] = 7.5e-1
+		self.C[13] = 8.57142857142857142857142857143e-1
+		self.C[14] = 9.45216222272014340129957427739e-1
+		self.C[15] = 1.0e0
+		self.C[16] = 1.0e0
+	
+		# A matrix
+		self.A[1,0]   = 2.0e-4
+		self.A[2,0]   = 2.66666666666666666666666666667e-4
+		self.A[2,1]   = 5.33333333333333333333333333333e-4
+		self.A[3,0]   = 2.91666666666666666666666666667e-3
+		self.A[3,1]   = -4.16666666666666666666666666667e-3
+		self.A[3,2]   = 6.25e-3
+		self.A[4,0]   = 1.64609053497942386831275720165e-3
+		self.A[4,1]   = 0.0e0
+		self.A[4,2]   = 5.48696844993141289437585733882e-3
+		self.A[4,3]   = 1.75582990397805212620027434842e-3
+		self.A[5,0]   = 1.9456e-3
+		self.A[5,1]   = 0.0e0
+		self.A[5,2]   = 7.15174603174603174603174603175e-3
+		self.A[5,3]   = 2.91271111111111111111111111111e-3
+		self.A[5,4]   = 7.89942857142857142857142857143e-4
+		self.A[6,0]   = 5.6640625e-4
+		self.A[6,1]   = 0.0e0
+		self.A[6,2]   = 8.80973048941798941798941798942e-4
+		self.A[6,3]   = -4.36921296296296296296296296296e-4
+		self.A[6,4]   = 3.39006696428571428571428571429e-4
+		self.A[6,5]   = -9.94646990740740740740740740741e-5
+		self.A[7,0]   = 3.08333333333333333333333333333e-3
+		self.A[7,1]   = 0.0e0
+		self.A[7,2]   = 0.0e0
+		self.A[7,3]   = 1.77777777777777777777777777778e-3
+		self.A[7,4]   = 2.7e-3
+		self.A[7,5]   = 1.57828282828282828282828282828e-3
+		self.A[7,6]   = 1.08606060606060606060606060606e-2
+		self.A[8,0]   = 3.65183937480112971375119150338e-3
+		self.A[8,1]   = 0.0e0
+		self.A[8,2]   = 3.96517171407234306617557289807e-3
+		self.A[8,3]   = 3.19725826293062822350093426091e-3
+		self.A[8,4]   = 8.22146730685543536968701883401e-3
+		self.A[8,5]   = -1.31309269595723798362013884863e-3
+		self.A[8,6]   = 9.77158696806486781562609494147e-3
+		self.A[8,7]   = 3.75576906923283379487932641079e-3
+		self.A[9,0]   = 3.70724106871850081019565530521e-3
+		self.A[9,1]   = 0.0e0
+		self.A[9,2]   = 5.08204585455528598076108163479e-3
+		self.A[9,3]   = 1.17470800217541204473569104943e-3
+		self.A[9,4]   = -2.11476299151269914996229766362e-2
+		self.A[9,5]   = 6.01046369810788081222573525136e-2
+		self.A[9,6]   = 2.01057347685061881846748708777e-2
+		self.A[9,7]   = -2.83507501229335808430366774368e-2
+		self.A[9,8]   = 1.48795689185819327555905582479e-2
+		self.A[10,0]  = 3.51253765607334415311308293052e-2
+		self.A[10,1]  = 0.0e0
+		self.A[10,2]  = -8.61574919513847910340576078545e-3
+		self.A[10,3]  = -5.79144805100791652167632252471e-3
+		self.A[10,4]  = 1.94555482378261584239438810411e0
+		self.A[10,5]  = -3.43512386745651359636787167574e0
+		self.A[10,6]  = -1.09307011074752217583892572001e-1
+		self.A[10,7]  = 2.3496383118995166394320161088e0
+		self.A[10,8]  = -7.56009408687022978027190729778e-1
+		self.A[10,9]  = 1.09528972221569264246502018618e-1
+		self.A[11,0]  = 2.05277925374824966509720571672e-2
+		self.A[11,1]  = 0.0e0
+		self.A[11,2]  = -7.28644676448017991778247943149e-3
+		self.A[11,3]  = -2.11535560796184024069259562549e-3
+		self.A[11,4]  = 9.27580796872352224256768033235e-1
+		self.A[11,5]  = -1.65228248442573667907302673325e0
+		self.A[11,6]  = -2.10795630056865698191914366913e-2
+		self.A[11,7]  = 1.20653643262078715447708832536e0
+		self.A[11,8]  = -4.13714477001066141324662463645e-1
+		self.A[11,9]  = 9.07987398280965375956795739516e-2
+		self.A[11,10] = 5.35555260053398504916870658215e-3
+		self.A[12,0]  = -1.43240788755455150458921091632e-1
+		self.A[12,1]  = 0.0e0
+		self.A[12,2]  = 1.25287037730918172778464480231e-2
+		self.A[12,3]  = 6.82601916396982712868112411737e-3
+		self.A[12,4]  = -4.79955539557438726550216254291e0
+		self.A[12,5]  = 5.69862504395194143379169794156e0
+		self.A[12,6]  = 7.55343036952364522249444028716e-1
+		self.A[12,7]  = -1.27554878582810837175400796542e-1
+		self.A[12,8]  = -1.96059260511173843289133255423e0
+		self.A[12,9]  = 9.18560905663526240976234285341e-1
+		self.A[12,10] = -2.38800855052844310534827013402e-1
+		self.A[12,11] = 1.59110813572342155138740170963e-1
+		self.A[13,0]  = 8.04501920552048948697230778134e-1
+		self.A[13,1]  = 0.0e0
+		self.A[13,2]  = -1.66585270670112451778516268261e-2
+		self.A[13,3]  = -2.1415834042629734811731437191e-2
+		self.A[13,4]  = 1.68272359289624658702009353564e1
+		self.A[13,5]  = -1.11728353571760979267882984241e1
+		self.A[13,6]  = -3.37715929722632374148856475521e0
+		self.A[13,7]  = -1.52433266553608456461817682939e1
+		self.A[13,8]  = 1.71798357382154165620247684026e1
+		self.A[13,9]  = -5.43771923982399464535413738556e0
+		self.A[13,10] = 1.38786716183646557551256778839e0
+		self.A[13,11] = -5.92582773265281165347677029181e-1
+		self.A[13,12] = 2.96038731712973527961592794552e-2
+		self.A[14,0]  = -9.13296766697358082096250482648e-1
+		self.A[14,1]  = 0.0e0
+		self.A[14,2]  = 2.41127257578051783924489946102e-3
+		self.A[14,3]  = 1.76581226938617419820698839226e-2
+		self.A[14,4]  = -1.48516497797203838246128557088e1
+		self.A[14,5]  = 2.15897086700457560030782161561e0
+		self.A[14,6]  = 3.99791558311787990115282754337e0
+		self.A[14,7]  = 2.84341518002322318984542514988e1
+		self.A[14,8]  = -2.52593643549415984378843352235e1
+		self.A[14,9]  = 7.7338785423622373655340014114e0
+		self.A[14,10] = -1.8913028948478674610382580129e0
+		self.A[14,11] = 1.00148450702247178036685959248e0
+		self.A[14,12] = 4.64119959910905190510518247052e-3
+		self.A[14,13] = 1.12187550221489570339750499063e-2
+		self.A[15,0]  = -2.75196297205593938206065227039e-1
+		self.A[15,1]  = 0.0e0
+		self.A[15,2]  = 3.66118887791549201342293285553e-2
+		self.A[15,3]  = 9.7895196882315626246509967162e-3
+		self.A[15,4]  = -1.2293062345886210304214726509e1
+		self.A[15,5]  = 1.42072264539379026942929665966e1
+		self.A[15,6]  = 1.58664769067895368322481964272e0
+		self.A[15,7]  = 2.45777353275959454390324346975e0
+		self.A[15,8]  = -8.93519369440327190552259086374e0
+		self.A[15,9]  = 4.37367273161340694839327077512e0
+		self.A[15,10] = -1.83471817654494916304344410264e0
+		self.A[15,11] = 1.15920852890614912078083198373e0
+		self.A[15,12] = -1.72902531653839221518003422953e-2
+		self.A[15,13] = 1.93259779044607666727649875324e-2
+		self.A[15,14] = 5.20444293755499311184926401526e-3
+		self.A[16,0]  = 1.30763918474040575879994562983e0
+		self.A[16,1]  = 0.0e0
+		self.A[16,2]  = 1.73641091897458418670879991296e-2
+		self.A[16,3]  = -1.8544456454265795024362115588e-2
+		self.A[16,4]  = 1.48115220328677268968478356223e1
+		self.A[16,5]  = 9.38317630848247090787922177126e0
+		self.A[16,6]  = -5.2284261999445422541474024553e0
+		self.A[16,7]  = -4.89512805258476508040093482743e1
+		self.A[16,8]  = 3.82970960343379225625583875836e1
+		self.A[16,9]  = -1.05873813369759797091619037505e1
+		self.A[16,10] = 2.43323043762262763585119618787e0
+		self.A[16,11] = -1.04534060425754442848652456513e0
+		self.A[16,12] = 7.17732095086725945198184857508e-2
+		self.A[16,13] = 2.16221097080827826905505320027e-3
+		self.A[16,14] = 7.00959575960251423699282781988e-3
+		self.A[16,15] = 0.0e0
+	
+		# 12th order solution
+		self.B[0]  = 1.21278685171854149768890395495e-2
+		self.B[1]  = 0.0e0
+		self.B[2]  = 0.0e0
+		self.B[3]  = 0.0e0
+		self.B[4]  = 0.0e0
+		self.B[5]  = 0.0e0
+		self.B[6]  = 8.62974625156887444363792274411e-2
+		self.B[7]  = 2.52546958118714719432343449316e-1
+		self.B[8]  = -1.97418679932682303358307954886e-1
+		self.B[9]  = 2.03186919078972590809261561009e-1
+		self.B[10] = -2.07758080777149166121933554691e-2
+		self.B[11] = 1.09678048745020136250111237823e-1
+		self.B[12] = 3.80651325264665057344878719105e-2
+		self.B[13] = 1.16340688043242296440927709215e-2
+		self.B[14] = 4.65802970402487868693615238455e-3
+		self.B[15] = 0.0e0
+		self.B[16] = 0.0e0
+	
+		# 10th order solution
+		self.Bhat[0]  = 1.70087019070069917527544646189e-2
+		self.Bhat[1]  = 0.0e0
+		self.Bhat[2]  = 0.0e0
+		self.Bhat[3]  = 0.0e0
+		self.Bhat[4]  = 0.0e0
+		self.Bhat[5]  = 0.0e0
+		self.Bhat[6]  = 7.22593359308314069488600038463e-2
+		self.Bhat[7]  = 3.72026177326753045388210502067e-1
+		self.Bhat[8]  = -4.01821145009303521439340233863e-1
+		self.Bhat[9]  = 3.35455068301351666696584034896e-1
+		self.Bhat[10] = -1.31306501075331808430281840783e-1
+		self.Bhat[11] = 1.89431906616048652722659836455e-1
+		self.Bhat[12] = 2.68408020400290479053691655806e-2
+		self.Bhat[13] = 1.63056656059179238935180933102e-2
+		self.Bhat[14] = 3.79998835669659456166597387323e-3
+		self.Bhat[15] = 0.0e0
+		self.Bhat[16] = 0.0e0
+	
+		# 12th order solution (derivative)
+		self.Bp[0]  = 1.21278685171854149768890395495e-2
+		self.Bp[1]  = 0.0e0
+		self.Bp[2]  = 0.0e0
+		self.Bp[3]  = 0.0e0
+		self.Bp[4]  = 0.0e0
+		self.Bp[5]  = 0.0e0
+		self.Bp[6]  = 9.08394342270407836172412920433e-2
+		self.Bp[7]  = 3.15683697648393399290429311645e-1
+		self.Bp[8]  = -2.63224906576909737811077273181e-1
+		self.Bp[9]  = 3.04780378618458886213892341513e-1
+		self.Bp[10] = -4.15516161554298332243867109382e-2
+		self.Bp[11] = 2.46775609676295306562750285101e-1
+		self.Bp[12] = 1.52260530105866022937951487642e-1
+		self.Bp[13] = 8.14384816302696075086493964505e-2
+		self.Bp[14] = 8.50257119389081128008018326881e-2
+		self.Bp[15] = -9.15518963007796287314100251351e-3
+		self.Bp[16] = 2.5e-2
+	
+		# 10th order solution (derivative)
+		self.Bphat[0]  = 1.70087019070069917527544646189e-2
+		self.Bphat[1]  = 0.0e0
+		self.Bphat[2]  = 0.0e0
+		self.Bphat[3]  = 0.0e0
+		self.Bphat[4]  = 0.0e0
+		self.Bphat[5]  = 0.0e0
+		self.Bphat[6]  = 7.60624588745593757356421093119e-2
+		self.Bphat[7]  = 4.65032721658441306735263127583e-1
+		self.Bphat[8]  = -5.35761526679071361919120311817e-1
+		self.Bphat[9]  = 5.03182602452027500044876052344e-1
+		self.Bphat[10] = -2.62613002150663616860563681567e-1
+		self.Bphat[11] = 4.26221789886109468625984632024e-1
+		self.Bphat[12] = 1.07363208160116191621476662322e-1
+		self.Bphat[13] = 1.14139659241425467254626653171e-1
+		self.Bphat[14] = 6.93633866500486770090602920091e-2
+		self.Bphat[15] = 2.0e-2
+		self.Bphat[16] = 0.0e0
 		return
 	
 	# Convert to a function that python can see
