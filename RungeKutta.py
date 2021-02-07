@@ -156,11 +156,9 @@ def odeRK(scheme,fun,xspan,y0,params=odeset()):
 	f = np.zeros((rkm.nstep, dim), dtype=np.double)
 	
 	# Definitions
-#	ylow  = np.zeros((dim,), dtype=np.double)
-#	yhigh = np.zeros((dim,), dtype=np.double)
 	dydx  = np.zeros((dim,), dtype=np.double)
 	val   = np.zeros((1,), dtype=np.double)
-	dir   = 0
+	dire  = 0
 	g_ant = 0.
 	
 	# Runge-Kutta loop
@@ -208,7 +206,7 @@ def odeRK(scheme,fun,xspan,y0,params=odeset()):
 		# Event function
 		if params.eventfcn:
 			# Run event function
-			ccont = params.eventfcn(x[n],yhigh,dim,val,dir)
+			ccont = params.eventfcn(x[n],yhigh,dim,val,dire)
 			# Naive approximation to a root finding algorithm
 			# using a crude mid-point rule
 			if (n != 0 and val[0]*g_ant < 0):
@@ -385,13 +383,9 @@ def odeRKN(scheme,fun,xspan,y0,dy0,params=odeset()):
 	f2 = np.zeros((rkm.nstep, dim), dtype=np.double)
 	
 	# Definitions
-#	ylow   = np.zeros((dim,), dtype=np.double)
-#	yhigh  = np.zeros((dim,), dtype=np.double)
-#   dylow  = np.zeros((dim,), dtype=np.double)
-#   dyhigh = np.zeros((dim,), dtype=np.double)
 	dy2dx  = np.zeros((dim,), dtype=np.double)
 	val    = np.zeros((1,), dtype=np.double)
-	dir    = 0
+	dire   = 0
 	g_ant  = 0.
 	
 	# Runge-Kutta loop
@@ -450,7 +444,7 @@ def odeRKN(scheme,fun,xspan,y0,dy0,params=odeset()):
 		# Event function
 		if params.eventfcn:
 			# Run event function
-			ccont = params.eventfcn(x[n],yhigh,dim,val,dir)
+			ccont = params.eventfcn(x[n],yhigh,dim,val,dire)
 			# Naive approximation to a root finding algorithm
 			# using a crude mid-point rule
 			if (n != 0 and val[0]*g_ant < 0):
