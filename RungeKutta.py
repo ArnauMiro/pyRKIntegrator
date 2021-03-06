@@ -162,9 +162,9 @@ def odeRK(scheme,fun,xspan,y0,params=odeset()):
 	g_ant = 0.
 	
 	# Runge-Kutta loop
-	while cont:
+	while cont and not last:
 		# Exit criteria
-		if x[n] + h > xspan[1]:
+		if x[n] + h >= xspan[1]:
 			cont, last = False, True
 			# Arrange the step so it finishes at xspan[1]
 			h = abs(x[n] - xspan[1])
@@ -389,9 +389,9 @@ def odeRKN(scheme,fun,xspan,y0,dy0,params=odeset()):
 	g_ant  = 0.
 	
 	# Runge-Kutta loop
-	while cont:
+	while cont and not last:
 		# Exit criteria
-		if x[n] + h > xspan[1]:
+		if x[n] + h >= xspan[1]:
 			cont, last = False, True
 			# Arrange the step so it finishes at xspan[1]
 			h = abs(x[n] - xspan[1])

@@ -114,9 +114,9 @@ RK_OUT odeRK(const char *scheme, void (*odefun)(double,double*,int,double*),
 	double ylow[n], yhigh[n], dydx[n], val[1], g_ant = 0.;
 
 	// Runge-Kutta loop
-	while(cont) {
+	while(cont && !last) {
 		// Exit criteria
-		if (x[rko.n]+h > xspan[1]) {
+		if (x[rko.n]+h >= xspan[1]) {
 			cont = 0; last = 1;
 			// Arrange the step so it finishes at xspan[1]
 			h = std::fabs(x[rko.n] - xspan[1]);
@@ -277,9 +277,9 @@ RK_OUT odeRKN(const char *scheme, void (*odefun)(double,double*,int,double*),
 	double ylow[n], yhigh[n], dylow[n], dyhigh[n], dy2dx[n], val[1], g_ant = 0.;
 
 	// Runge-Kutta loop
-	while(cont) {
+	while(cont && !last) {
 		// Exit criteria
-		if (x[rko.n]+h > xspan[1]) {
+		if (x[rko.n]+h >= xspan[1]) {
 			cont = 0; last = 1;
 			// Arrange the step so it finishes at xspan[1]
 			h = fabs(x[rko.n] - xspan[1]);
