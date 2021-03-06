@@ -505,36 +505,36 @@ def odeRKN(scheme,fun,xspan,y0,dy0,params=odeset()):
 class RKMethod():
 	def __init__(self, scheme):
 		# odeRK schemes
-		if scheme == 'eulerheun12':
+		if scheme.lower() == 'eulerheun12':
 			self.EulerHeun12()
-		elif scheme == 'bogackishampine23':
+		elif scheme.lower() == 'bogackishampine23':
 			self.Bogackishampine23()
-		elif scheme == 'dormandprince34a':
+		elif scheme.lower() == 'dormandprince34a':
 			self.DormandPrince34A()
-		elif scheme == 'fehlberg45':
+		elif scheme.lower() == 'fehlberg45':
 			self.Fehlberg45()
-		elif scheme == 'cashkarp45':
+		elif scheme.lower() == 'cashkarp45':
 			self.CashKarp45()
-		elif scheme == 'dormandprince45':
+		elif scheme.lower() == 'dormandprince45':
 			self.Dormandprince45()
-		elif scheme == 'dormandprince45a':
+		elif scheme.lower() == 'dormandprince45a':
 			self.DormandPrince45A()
-		elif scheme == 'calvo56':
+		elif scheme.lower() == 'calvo56':
 			self.Calvo56()
-		elif scheme == 'dormandprince78':
+		elif scheme.lower() == 'dormandprince78':
 			self.DormandPrince78()
-		elif scheme == 'curtis810':
+		elif scheme.lower() == 'curtis810':
 			self.Curtis810()
-		elif scheme == 'hiroshi912':
+		elif scheme.lower() == 'hiroshi912':
 			self.Hiroshi912()
 		# odeRKN schemes
-		elif scheme == 'rkn34':
+		elif scheme.lower() == 'rkn34':
 			self.RungeKuttaNystrom34()
-		elif scheme == 'rkn46':
+		elif scheme.lower() == 'rkn46':
 			self.RungeKuttaNystrom46()
-		elif scheme == 'rkn68':
+		elif scheme.lower() == 'rkn68':
 			self.RungeKuttaNystrom68()
-		elif scheme == 'rkn1012':
+		elif scheme.lower() == 'rkn1012':
 			self.RungeKuttaNystrom1012()
 		else:
 			raise ValueError('ERROR! Scheme <%s> not implemented.' % scheme)
