@@ -236,7 +236,7 @@ def odeRK(scheme,fun,xspan,y0,params=odeset()):
 			
 			# Output function
 			if params.outputfcn:
-				cont = bool(params.outputfcn(x[-1], yhigh, dim)) if cont else False
+				cont = bool(params.outputfcn(x[n], yhigh, dim)) if cont else False
 			
 			# Set the new step
 			# Source: Ketcheson, David, and Umair bin Waheed. 
