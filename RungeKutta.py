@@ -83,6 +83,21 @@ class odeset():
 		self.eventfcn    = eventfun
 		self.outputfcn   = outputfun 
 
+	def __str__(self):
+		'''
+		Print parameters in a readable format
+		'''
+		return 'Odeset structure:\n' + \
+			   'h0:                  %6.4f\n' % self.h0             + \
+			   'epsilon:             %.2e\n'  % self.eps            + \
+			   'eps eventfun:        %.2e\n'  % self.epsevf         + \
+			   'minimum step:        %6.4f\n' % self.minstep        + \
+			   'security factor:     %6.4f\n' % self.secfact        + \
+			   'max security factor: %6.4f\n' % self.secfact_max    + \
+			   'min security factor: %6.4f\n' % self.secfact_min    + \
+			   'event function:      %s\n'    % str(self.eventfcn)  + \
+			   'output function:     %s\n'    % str(self.outputfcn)
+
 	def set_h(self,xspan,div=10.):
 		'''
 		Initial and max step based on xspan
