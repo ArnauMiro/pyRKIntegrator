@@ -133,11 +133,11 @@ cdef void odefun_wrapper(double t,double* y,int n,double* dydx):
 cdef int eventfun_wrapper(double t,double* y,int n,double* value,int* direction):
 	global wrap_eventfun
 	cdef np.ndarray[np.double_t,ndim=1] _y      = double1D_to_numpy(y,n)
-	cdef np.ndarray[np.double_t,ndim=1] _value  = double1D_to_numpy(value,n)
-	cdef np.ndarray[np.int_t,ndim=1] _direction = int1D_to_numpy(direction,n)
+	cdef np.ndarray[np.double_t,ndim=1] _value  = double1D_to_numpy(value,1)
+	cdef np.ndarray[np.int_t,ndim=1] _direction = int1D_to_numpy(direction,1)
 	cdef int retval = wrap_eventfun(t,_y,n,_value,_direction)
-	memcpy(value,&_value[0],n*sizeof(double))
-	memcpy(direction,&_direction[0],n*sizeof(int))
+	value[0]     = _value[0]
+	direction[0] = _direction[0]
 	return retval
 
 cdef int outputfun_wrapper(double t,double *y,int n):
@@ -173,13 +173,13 @@ cdef class rkout:
 		return self.rko.err
 	@property
 	def x(self):
-		return double1D_to_numpy(self.rko.x,self.rko.n).copy()
+		return double1D_to_numpy(self.rko.x,self.rko.n+1).copy()
 	@property
 	def y(self):
-		return double2D_to_numpy(self.rko.y,self.rko.n,self.nvariables).copy()
+		return double2D_to_numpy(self.rko.y,self.rko.n+1,self.nvariables).copy()
 	@property
 	def dy(self):
-		return double2D_to_numpy(self.rko.dy,self.rko.n,self.nvariables).copy()
+		return double2D_to_numpy(self.rko.dy,self.rko.n+1,self.nvariables).copy()
 
 
 cdef class odeset:
