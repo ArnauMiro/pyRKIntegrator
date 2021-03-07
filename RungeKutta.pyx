@@ -233,15 +233,13 @@ cdef class odeset:
 		Print parameters in a readable format
 		'''
 		return 'Odeset structure:\n' + \
-			   'h0:                  %6.4f\n' % self.h0             + \
-			   'epsilon:             %.2e\n'  % self.eps            + \
-			   'eps eventfun:        %.2e\n'  % self.epsevf         + \
-			   'minimum step:        %6.4f\n' % self.minstep        + \
-			   'security factor:     %6.4f\n' % self.secfact        + \
-			   'max security factor: %6.4f\n' % self.secfact_max    + \
-			   'min security factor: %6.4f\n' % self.secfact_min    + \
-			   'event function:      %s\n'    % str(self.eventfcn)  + \
-			   'output function:     %s\n'    % str(self.outputfcn)
+			   'h0:                  %6.4f\n' % self.c_rkp.h0             + \
+			   'epsilon:             %.2e\n'  % self.c_rkp.eps            + \
+			   'eps eventfun:        %.2e\n'  % self.c_rkp.epsevf         + \
+			   'minimum step:        %6.4f\n' % self.c_rkp.minstep        + \
+			   'security factor:     %6.4f\n' % self.c_rkp.secfact        + \
+			   'max security factor: %6.4f\n' % self.c_rkp.secfact_max    + \
+			   'min security factor: %6.4f\n' % self.c_rkp.secfact_min
 
 	# We can expose every variable here so it can be accessed by python.
 	# These operations are slow and costly to do so it is wise just 
