@@ -59,6 +59,13 @@ The available Runge-Kutta-Nystrom schemes are:
 *	Runge-Kutta-Nystrom 6(8) (rkn68)
 *	Runge-Kutta-Nystrom 10(12) (rkn1012)
 
+## C and C++ implementations
+
+There is a C and a C++ implementation of the algorithms. The language can be chosen in the **Makefile** by setting the *USE_CPP* variable. The compilation of the examples and the python tools will follow.
+```bash
+make USE_CPP=ON/OFF
+```
+
 ## The Python interface
 
 The Python interface allows using the Runge-Kutta and Runge-Kutta-Nystrom integrators using Python's cython. The wrapper can be compiled using
