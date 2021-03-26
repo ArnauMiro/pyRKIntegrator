@@ -117,7 +117,7 @@ RK_OUT odeRK(const char *scheme, void (*odefun)(double,double*,int,double*),
 	while(cont) {
 		// Exit criteria
 		if (x[rko.n]+h > xspan[1]) {
-			cont = 0; last = 1;
+			last = 1;
 			// Arrange the step so it finishes at xspan[1]
 			h = std::fabs(x[rko.n] - xspan[1]);
 		}
@@ -149,12 +149,12 @@ RK_OUT odeRK(const char *scheme, void (*odefun)(double,double*,int,double*),
 
 		// Compute the total error
 		// Work with both relative and absolute errors
-		double error = 1.e-20, rel_err = 1.e-20, abs_err = 1.e-20; // Avoid division by zero
+		double rel_err = 1.e-20, abs_err = 1.e-20; // Avoid division by zero
 		for (int kk = 0; kk < n; kk++) {
 			rel_err = std::fmax(std::fabs(1.-ylow[kk]/yhigh[kk]),rel_err);
 			abs_err = std::fmax(std::fabs(yhigh[kk]-ylow[kk]),abs_err);
 		}
-		error = std::fmin(rel_err,abs_err);
+		double error = std::fmin(rel_err,abs_err);
 
 		// Step size control
 		// Source: Ketcheson, David, and Umair bin Waheed. 
@@ -176,12 +176,13 @@ RK_OUT odeRK(const char *scheme, void (*odefun)(double,double*,int,double*),
 			g_ant = (std::fabs(val[0]) < rkp->epsevf) ? 0 : val[0]; // Also restart g_ant
 		}
 
-		if (error < rkp->eps || last) {
+		if (error < rkp->eps) {
 
 			// This is a successful step
 			rko.retval = (rko.retval <= 0) ? 1 : rko.retval;
-			rko.err    = std::max(error,rko.err);
+			rko.err    = std::fmax(error,rko.err);
 			rko.n++;
+			if (last) cont = 0;
 
 			// Reallocate
 			if (rko.n % NNSTEP == 0) {
@@ -276,7 +277,7 @@ RK_OUT odeRKN(const char *scheme, void (*odefun)(double,double*,int,double*),
 	while(cont) {
 		// Exit criteria
 		if (x[rko.n]+h > xspan[1]) {
-			cont = 0; last = 1;
+			last = 1;
 			// Arrange the step so it finishes at xspan[1]
 			h = fabs(x[rko.n] - xspan[1]);
 		}
@@ -300,6 +301,7 @@ RK_OUT odeRKN(const char *scheme, void (*odefun)(double,double*,int,double*),
 			std::memcpy(yint,y.data()+n*rko.n,n*sizeof(double));
 			std::memcpy(dyint,dy.data()+n*rko.n,n*sizeof(double));
 
+
 			for (int kk = 0; kk < n; kk++) {
 				yint[kk] += h * rkm.C[ii] * dyint[kk];
 				for (int jj = 0; jj < ii; jj++)
@@ -310,6 +312,7 @@ RK_OUT odeRKN(const char *scheme, void (*odefun)(double,double*,int,double*),
 			(*odefun)(xint,yint,n,dy2dx);
 
 			// Update dydx and compute solutions
+
 			for (int kk = 0; kk < n; kk++) {
 				f[n*ii + kk]  = h * dy2dx[kk];
 				f2[n*ii + kk] = h * h * dy2dx[kk];
@@ -323,6 +326,7 @@ RK_OUT odeRKN(const char *scheme, void (*odefun)(double,double*,int,double*),
 		// Compute the total error
 		// Work with both relative and absolute errors
 		double error = 1.e-20, rel_err[2] = {1.e-20,1.e-20}, abs_err[2] = {1.e-20,1.e-20};
+
 		for (int kk = 0; kk < n; kk++) {
 			rel_err[0] = std::fmax(std::fabs(1.-dylow[kk]/dyhigh[kk]), rel_err[0]);
 			rel_err[1] = std::fmax(std::fabs(1.-ylow[kk]/yhigh[kk])  , rel_err[1]);
@@ -349,11 +353,12 @@ RK_OUT odeRKN(const char *scheme, void (*odefun)(double,double*,int,double*),
 			g_ant = (std::fabs(val[0]) < rkp->epsevf) ? 0 : val[0]; // Also restart g_ant
 		}
 
-		if (error < rkp->eps || last) {
+		if (error < rkp->eps) {
 			// This is a successful step
 			rko.retval = (rko.retval <= 0) ? 1 : rko.retval;
 			rko.err = (error > rko.err) ? error : rko.err;
 			rko.n++;
+			if (last) cont = 0;
 
 			// Reallocate
 			if (rko.n % NNSTEP == 0) {

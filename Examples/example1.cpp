@@ -14,7 +14,13 @@
 #include <string>
 #include <vector>
 
-#include "RK.h"
+#ifdef USE_C
+extern "C" {
+	#include "RK.h"
+}
+#else
+	#include "RK.h"
+#endif
 
 // Schemes to test
 std::vector<std::string> schemes = {

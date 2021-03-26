@@ -75,9 +75,9 @@ ifeq ($(CC),gcc)
 		CXXFLAGS += -O0 -g -rdynamic -fPIC
 		FFLAGS   += -O0 -g -rdynamic -fPIC
 	else
-		CFLAGS   += -O$(OPTL) -ffast-math -fPIC
-		CXXFLAGS += -O$(OPTL) -ffast-math -fPIC
-		FFLAGS   += -O$(OPTL) -ffast-math -fPIC
+		CFLAGS   += -O$(OPTL) -fPIC
+		CXXFLAGS += -O$(OPTL) -fPIC
+		FFLAGS   += -O$(OPTL) -fPIC
 	endif
 	# Vectorization flags
 	ifeq ($(VECTORIZATION),ON)
@@ -133,6 +133,7 @@ ifeq ($(USE_CPP),ON)
 else
 	RK_PATH   = src/c
 	RK_OBJS   = $(patsubst %.c,%.o,$(wildcard $(RK_PATH)/*.c))
+	DFLAGS   += -DUSE_C
 endif
 RK_INCL   = $(wildcard $(RK_PATH)/*.h)
 
@@ -201,7 +202,7 @@ includes:
 # Python
 #
 python: setup.py
-	@CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" ${PYTHON} $< build_ext --inplace
+	@CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" USE_CPP="${USE_CPP}" ${PYTHON} $< build_ext --inplace
 	@echo "Python programs deployed successfully"
 
 

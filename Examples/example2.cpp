@@ -11,7 +11,13 @@
 #include <cstdio>
 #include <cmath>
 
-#include "RK.h"
+#ifdef USE_C
+extern "C" {
+	#include "RK.h"
+}
+#else
+	#include "RK.h"
+#endif
 
 // Parameters
 const double g    = 9.81;

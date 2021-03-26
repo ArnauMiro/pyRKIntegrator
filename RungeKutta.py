@@ -180,7 +180,7 @@ def odeRK(scheme,fun,xspan,y0,params=odeset()):
 	while cont:
 		# Exit criteria
 		if x[n] + h > xspan[1]:
-			cont, last = False, True
+			last = True
 			# Arrange the step so it finishes at xspan[1]
 			h = abs(x[n] - xspan[1])
 			
@@ -203,14 +203,14 @@ def odeRK(scheme,fun,xspan,y0,params=odeset()):
 			# Update dydx and compute solutions
 			f[ii,:]   = h * dydx
 			ylow[:]  += rkm.Bhat[ii] * f[ii,:]
-			yhigh[:] += rkm.B[ii] * f[ii,:]
+			yhigh[:] += rkm.B[ii]    * f[ii,:]
 
 		# Compute the total error
 		# Work with both relative and absolute errors
 		rel_err = np.nanmax(np.abs(1.-ylow/yhigh))
 		abs_err = np.nanmax(np.abs(yhigh-ylow))
 			
-		error = max(1e-20,min(rel_err,abs_err)) # Avoid division by zero
+		error = min(rel_err,abs_err) # Avoid division by zero
 
 		# Step size control
 		# Source: Ketcheson, David, and Umair bin Waheed. 
@@ -234,11 +234,12 @@ def odeRK(scheme,fun,xspan,y0,params=odeset()):
 			cont  = bool(ccont) if abs(val[0]) < params.epsevf else cont
 			g_ant = 0 if abs(val[0]) < params.epsevf else val[0] # Also restart g_ant
 		
-		if error < params.eps or last:
+		if error < params.eps:
 			# This is a successful step
 			retval = 1 if retval <= 0 else retval
 			err    = max(error,err)
 			n     += 1
+			if last: cont = False
 			
 			# Reallocate
 			if n % NNSTEP == 0:
