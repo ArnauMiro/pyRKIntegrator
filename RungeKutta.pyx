@@ -82,7 +82,7 @@ cdef extern from "RK.h":
 	cdef RK_OUT c_odeRK "odeRK" (const char *scheme, void (*odefun)(double,double*,int,double*),
 		double xspan[2], double y0[], const int n, const RK_PARAM *rkp)
 	# Expose the Runge-Kutta-Nystrom integrator
-	RK_OUT c_odeRKN "odeRKN"(const char *scheme, void (*odefun)(double,double*,int,double*),
+	cdef RK_OUT c_odeRKN "odeRKN"(const char *scheme, void (*odefun)(double,double*,int,double*),
 		double xspan[2], double y0[], double dy0[], const int n, const RK_PARAM *rkp);
 	# Expose the free rkout
 	cdef void freerkout(const RK_OUT *rko)
@@ -157,7 +157,6 @@ cdef class rkout:
 
 	def __cinit__(self,nvariables):
 		self.nvariables = nvariables
-		pass
 
 	def __dealloc__(self):
 		freerkout(&self.rko)
@@ -173,13 +172,13 @@ cdef class rkout:
 		return self.rko.err
 	@property
 	def x(self):
-		return double1D_to_numpy(self.rko.x,self.rko.n+1).copy()
+		return double1D_to_numpy(self.rko.x,self.rko.n+1)
 	@property
 	def y(self):
-		return double2D_to_numpy(self.rko.y,self.rko.n+1,self.nvariables).copy()
+		return double2D_to_numpy(self.rko.y,self.rko.n+1,self.nvariables)
 	@property
 	def dy(self):
-		return double2D_to_numpy(self.rko.dy,self.rko.n+1,self.nvariables).copy()
+		return double2D_to_numpy(self.rko.dy,self.rko.n+1,self.nvariables)
 
 
 cdef class odeset:
@@ -344,12 +343,7 @@ def odeRK(object scheme,object fun,double[:] xspan,double[:] y0,odeset params=od
 	if retval == -1:
 		raise ValueError('ERROR! Integration step required under minimum.')
 
-	# Set output
-	cdef np.ndarray[np.double_t,ndim=1] x = out.x
-	cdef np.ndarray[np.double_t,ndim=2] y = out.y
-	cdef double                       err = out.err
-
-	return x,y,err
+	return out.x,out.y,out.err
 
 def ode23(object fun,double[:] xspan,double[:] y0,odeset params=odeset()):
 	'''
