@@ -23,6 +23,7 @@ VECTORIZATION  = ON
 OPENMP_PARALL  = OFF
 FORCE_GCC      = OFF
 DEBUGGING      = OFF
+USE_CPP        = ON
 
 # Paths to the installed binaries
 #
@@ -126,8 +127,13 @@ DFLAGS =
 
 # Paths to the various libraries to compile
 #
-RK_PATH   = src/
-RK_OBJS   = $(patsubst %.cpp,%.o,$(wildcard $(RK_PATH)/*.cpp))
+ifeq ($(USE_CPP),ON)
+	RK_PATH   = src/cpp
+	RK_OBJS   = $(patsubst %.cpp,%.o,$(wildcard $(RK_PATH)/*.cpp))
+else
+	RK_PATH   = src/c
+	RK_OBJS   = $(patsubst %.c,%.o,$(wildcard $(RK_PATH)/*.c))
+endif
 RK_INCL   = $(wildcard $(RK_PATH)/*.h)
 
 

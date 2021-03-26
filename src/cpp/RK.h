@@ -82,7 +82,7 @@ typedef enum _RK_SCHEME {
 
 inline const char *RKS2str(const RK_SCHEME rks){
 	switch (rks) {
-		case NONE:				return NULL;
+		case NONE:				return "none";
 		case EULERHEUN12:       return "eulerheun12";
 		case BOGACKISHAMPINE23: return "bogackishampine23";
 		case DORMANDPRINCE34A:  return "dormandprince34a";
@@ -99,7 +99,7 @@ inline const char *RKS2str(const RK_SCHEME rks){
 		case RKN68:             return "rnk68";
 		case RKN1012:           return "rnk1012";
 	}
-	return NULL;
+	return "notfound";
 }
 
 inline RK_SCHEME str2RKS(const char *str) {

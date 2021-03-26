@@ -17,7 +17,7 @@ from Cython.Build import cythonize
 setup(
 	name="pyRungeKutta",
 	ext_modules=cythonize([
-			Extension('RungeKutta' ,sources=['RungeKutta.pyx','src/RK.cpp'], language='c++',include_dirs=['./src',np.get_include()]),
+			Extension('RungeKutta' ,sources=['RungeKutta.pyx','src/cpp/RK.cpp'], language='c++',include_dirs=['./src/cpp',np.get_include()]),
 		],
 		language_level = "3", # This is to specify python 3 synthax
 		annotate=True         # This is to generate a report on the conversion to C code

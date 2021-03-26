@@ -132,8 +132,6 @@ RK_OUT odeRK(const char *scheme, void (*odefun)(double,double*,int,double*),
 			double yint[n];
 			std::memcpy(yint,y.data()+n*rko.n,n*sizeof(double));
 			
-			#pragma nounroll
-			#pragma simd vecremainder
 			for (int kk = 0; kk < n; kk++)
 				for (int jj = 0; jj < ii; jj++)
 					yint[kk] += rkm.A[rkm.Aind(ii,jj)] * f[n*jj + kk];
@@ -142,7 +140,6 @@ RK_OUT odeRK(const char *scheme, void (*odefun)(double,double*,int,double*),
 			(*odefun)(xint,yint,n,dydx);
 
 			// Update dydx and compute solutions
-			#pragma nounroll
 			for (int kk = 0; kk < n; kk++) {
 				f[n*ii + kk] = h * dydx[kk];
 				ylow[kk]  += rkm.Bhat[ii] * f[n*ii + kk];
@@ -153,7 +150,6 @@ RK_OUT odeRK(const char *scheme, void (*odefun)(double,double*,int,double*),
 		// Compute the total error
 		// Work with both relative and absolute errors
 		double error = 1.e-20, rel_err = 1.e-20, abs_err = 1.e-20; // Avoid division by zero
-		#pragma nounroll
 		for (int kk = 0; kk < n; kk++) {
 			rel_err = std::fmax(std::fabs(1.-ylow[kk]/yhigh[kk]),rel_err);
 			abs_err = std::fmax(std::fabs(yhigh[kk]-ylow[kk]),abs_err);
@@ -304,9 +300,6 @@ RK_OUT odeRKN(const char *scheme, void (*odefun)(double,double*,int,double*),
 			std::memcpy(yint,y.data()+n*rko.n,n*sizeof(double));
 			std::memcpy(dyint,dy.data()+n*rko.n,n*sizeof(double));
 
-			//#pragma nounroll
-			#pragma simd vecremainder
-			#pragma loop_count min(1), max(20), avg(6)
 			for (int kk = 0; kk < n; kk++) {
 				yint[kk] += h * rkm.C[ii] * dyint[kk];
 				for (int jj = 0; jj < ii; jj++)
@@ -317,9 +310,6 @@ RK_OUT odeRKN(const char *scheme, void (*odefun)(double,double*,int,double*),
 			(*odefun)(xint,yint,n,dy2dx);
 
 			// Update dydx and compute solutions
-			//#pragma nounroll
-			#pragma simd vecremainder
-			#pragma loop_count min(1), max(20), avg(6)
 			for (int kk = 0; kk < n; kk++) {
 				f[n*ii + kk]  = h * dy2dx[kk];
 				f2[n*ii + kk] = h * h * dy2dx[kk];
@@ -333,9 +323,6 @@ RK_OUT odeRKN(const char *scheme, void (*odefun)(double,double*,int,double*),
 		// Compute the total error
 		// Work with both relative and absolute errors
 		double error = 1.e-20, rel_err[2] = {1.e-20,1.e-20}, abs_err[2] = {1.e-20,1.e-20};
-		//#pragma nounroll
-		#pragma simd vecremainder
-		#pragma loop_count min(1), max(20), avg(6)
 		for (int kk = 0; kk < n; kk++) {
 			rel_err[0] = std::fmax(std::fabs(1.-dylow[kk]/dyhigh[kk]), rel_err[0]);
 			rel_err[1] = std::fmax(std::fabs(1.-ylow[kk]/yhigh[kk])  , rel_err[1]);
