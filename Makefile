@@ -133,7 +133,6 @@ ifeq ($(USE_CPP),ON)
 else
 	RK_PATH   = src/c
 	RK_OBJS   = $(patsubst %.c,%.o,$(wildcard $(RK_PATH)/*.c))
-	DFLAGS   += -DUSE_C
 endif
 RK_INCL   = $(wildcard $(RK_PATH)/*.h)
 

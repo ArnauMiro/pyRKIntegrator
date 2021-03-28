@@ -14,13 +14,8 @@
 #include <string>
 #include <vector>
 
-#ifdef USE_C
-extern "C" {
-	#include "RK.h"
-}
-#else
-	#include "RK.h"
-#endif
+#include "RK.h"
+
 
 #define PI 4.*atan(1)
 

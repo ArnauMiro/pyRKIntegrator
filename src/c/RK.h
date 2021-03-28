@@ -40,6 +40,10 @@
 	Last rev: 2021
 */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
 	RUNGE-KUTTA SCHEMES
 
@@ -160,3 +164,7 @@ RK_OUT odeRK(const char *scheme, void (*odefun)(double, double *, int, double *)
 RK_OUT odeRKN(const char *scheme, void (*odefun)(double, double *, int, double *),
                double xspan[2], double *y0, double *dy0, const int n, const RK_PARAM *rkp);
 int check_tableau(const char *scheme);
+
+#ifdef __cplusplus
+}
+#endif
