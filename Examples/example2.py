@@ -23,7 +23,7 @@ h0   = 100.
 v0   = 0.
 
 # Define the function to integrate
-def eqnfreefall(t,y,n,dydx):
+def eqnfreefall(t,y,n,dydx,*args):
 	'''
 	t    = time
 	y[0] = velocity

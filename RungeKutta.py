@@ -105,7 +105,7 @@ class odeset():
 		self.h0 = (xspan[1] - xspan[0])/div
 
 
-def odeRK(scheme,fun,xspan,y0,params=odeset()):
+def odeRK(scheme,fun,xspan,y0,params=odeset(),extra_vars=None):
 	'''
 	RUNGE-KUTTA Integration
 
@@ -198,7 +198,7 @@ def odeRK(scheme,fun,xspan,y0,params=odeset()):
 					yint[kk] += rkm.A[ii,jj] * f[jj,kk]
 					
 			# Call function
-			fun(xint, yint, dim, dydx)
+			fun(xint, yint, dim, dydx, extra_vars)
 
 			# Update dydx and compute solutions
 			f[ii,:]   = h * dydx
@@ -277,7 +277,7 @@ def odeRK(scheme,fun,xspan,y0,params=odeset()):
 
 	return x[:n+1], y[:n+1,:], err
 
-def ode23(fun,xspan,y0,params=odeset()):
+def ode23(fun,xspan,y0,params=odeset(),extra_vars=None):
 	'''
 	ODE23
 
@@ -305,7 +305,7 @@ def ode23(fun,xspan,y0,params=odeset()):
 	'''
 	return odeRK("bogackishampine23",fun,xspan,y0,params)
 
-def ode45(fun,xspan,y0,params=odeset()):
+def ode45(fun,xspan,y0,params=odeset(),extra_vars=None):
 	'''
 	ODE45
 
@@ -334,7 +334,7 @@ def ode45(fun,xspan,y0,params=odeset()):
 	return odeRK("dormandprince45",fun,xspan,y0,params)
 
 
-def odeRKN(scheme,fun,xspan,y0,dy0,params=odeset()):
+def odeRKN(scheme,fun,xspan,y0,dy0,params=odeset(),extra_vars=None):
 	'''
 	RUNGE-KUTTA-NYSTROM Integration
 
@@ -434,7 +434,7 @@ def odeRKN(scheme,fun,xspan,y0,dy0,params=odeset()):
 					yint[kk] += rkm.A[ii,jj] * f2[jj,kk]
 					
 			# Call function
-			fun(xint, yint, dim, dy2dx)
+			fun(xint, yint, dim, dy2dx, extra_vars)
 
 			# Update dydx and compute solutions
 			f[ii,:]   = h * dy2dx
@@ -509,7 +509,6 @@ def odeRKN(scheme,fun,xspan,y0,dy0,params=odeset()):
 			else:
 				h = hest
 
-
 	# Return
 	if retval == 0:
 		raise ValueError('ERROR! Something went wrong during the integration.')
@@ -517,6 +516,7 @@ def odeRKN(scheme,fun,xspan,y0,dy0,params=odeset()):
 		raise ValueError('ERROR! Integration step required under minimum.')
 
 	return x[:n], y[:n,:], dy[:n,:], err
+
 
 class RKMethod():
 	def __init__(self, scheme):
@@ -2472,7 +2472,8 @@ class RKMethod():
 			retval = 0
 		
 		return retval
-	
+
+
 def CheckTableau(scheme):
 	rk = RKMethod(scheme)
 	return rk.CheckTableau()

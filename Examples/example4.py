@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 plt.style.use('ggplot')
 
 # Define the function to integrate
-def odefun(x,y,n,dy2dx):
+def odefun(x,y,n,dy2dx,*args):
 	'''
 	Function to integrate. Must be as:
 
