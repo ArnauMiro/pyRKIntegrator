@@ -38,6 +38,7 @@ INC_PATH     = $(INSTALL_PATH)/include
 # Automatically detect if the intel compilers are installed and use
 # them, otherwise default to the GNU compilers
 PYTHON = python
+PIP    = pip
 ifeq ($(FORCE_GCC),ON) 
 	# Forcing the use of GCC
 	# C Compiler
@@ -128,10 +129,10 @@ DFLAGS =
 # Paths to the various libraries to compile
 #
 ifeq ($(USE_CPP),ON)
-	RK_PATH   = src/cpp
+	RK_PATH   = pyRKIntegrator/src/cpp
 	RK_OBJS   = $(patsubst %.cpp,%.o,$(wildcard $(RK_PATH)/*.cpp))
 else
-	RK_PATH   = src/c
+	RK_PATH   = pyRKIntegrator/src/c
 	RK_OBJS   = $(patsubst %.c,%.o,$(wildcard $(RK_PATH)/*.c))
 endif
 RK_INCL   = $(wildcard $(RK_PATH)/*.h)
@@ -148,7 +149,7 @@ endif
 
 # One rule to compile them all, one rule to find them,
 # One rule to bring them all and in the compiler link them.
-all: paths libs examples python
+all: paths libs examples requirements python install
 	@echo ""
 	@echo "pyRKIntegrator deployed successfully"
 
@@ -204,6 +205,14 @@ python: setup.py
 	@CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" USE_CPP="${USE_CPP}" ${PYTHON} $< build_ext --inplace
 	@echo "Python programs deployed successfully"
 
+requirements: requirements.txt
+	@${PIP} install -r $<
+
+install: 
+	@${PIP} install .
+
+install_dev: 
+	@${PIP} install -e .
 
 # Generic object makers
 #
@@ -223,16 +232,18 @@ python: setup.py
 # Clean
 #
 clean:
-	-@rm -f *.o $(wildcard **/*.o) $(wildcard **/*/*.o)
-	-@rm -f *.pyc $(wildcard **/*.pyc) $(wildcard **/*/*.pyc)
-	-@rm -f RungeKutta.c RungeKutta.cpp RungeKutta.html
+	-@cd pyRKIntegrator; rm -f *.o $(wildcard **/*.o) $(wildcard **/*/*.o) $(wildcard **/*/*/*.o)
+	-@cd pyRKIntegrator; rm -f *.pyc $(wildcard **/*.pyc) $(wildcard **/*/*.pyc)
+	-@cd pyRKIntegrator; rm -f RungeKutta.c RungeKutta.cpp RungeKutta.html
 	-@rm -rf build __pycache__
 cleanall:  clean 
 	-@rm -rf $(wildcard $(INC_PATH)/*)
 	-@rm -rf $(wildcard $(LIBS_PATH)/*)
 	-@rm -rf $(wildcard $(BIN_PATH)/*)
 uninstall: cleanall
-	-@rm *.so
+	-@cd pyRKIntegrator; rm *.so
 	-@rm -rf $(BIN_PATH)
 	-@rm -rf $(LIBS_PATH)
 	-@rm -rf $(INC_PATH)
+	-@${PIP} uninstall pyRKIntegrator
+	-@rm -rf pyRKIntegrator.egg-info

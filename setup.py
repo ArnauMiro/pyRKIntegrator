@@ -8,33 +8,46 @@
 # Last rev: 2021
 from __future__ import print_function, division
 
-import os, numpy as np
+import sys, os, numpy as np
 
-from setuptools import setup, Extension
+from setuptools import setup, Extension, find_packages
 from Cython.Build import cythonize
 
+_USE_CPP = True
+try:
+	_USE_CPP = True if os.environ['USE_CPP'] == 'ON' else False
+except:
+	pass
+	
+with open('README.md') as f:
+	readme = f.read()
 
 ## Modules
 # Code in CPP
-RK_cpp = Extension('RungeKutta',
-				   sources      = ['RungeKutta.pyx','src/cpp/RK.cpp'],
+RK_cpp = Extension('pyRKIntegrator.RungeKutta',
+				   sources      = ['pyRKIntegrator/RungeKutta.pyx','pyRKIntegrator/src/cpp/RK.cpp'],
 				   language     = 'c++',
-				   include_dirs = ['./src/cpp',np.get_include()]
+				   include_dirs = ['pyRKIntegrator/src/cpp',np.get_include()]
 				  )
 # Code in C
-RK_c   = Extension('RungeKutta',
-				   sources      = ['RungeKutta.pyx','src/c/RK.c'],
+RK_c   = Extension('pyRKIntegrator.RungeKutta',
+				   sources      = ['pyRKIntegrator/RungeKutta.pyx','pyRKIntegrator/src/c/RK.c'],
 				   language     = 'c',
-				   include_dirs = ['./src/c',np.get_include()]
+				   include_dirs = ['pyRKIntegrator/src/c',np.get_include()]
 				  )
 
 # Main setup
 setup(
-	name="pyRungeKutta",
+	name="pyRKIntegrator",
+	version="2.0.0",
 	ext_modules=cythonize([
-			RK_cpp if os.environ['USE_CPP'] == 'ON' else RK_c
+			RK_cpp if _USE_CPP else RK_c
 		],
-		language_level = "3", # This is to specify python 3 synthax
+		language_level = str(sys.version_info[0]), # This is to specify python 3 synthax
 		annotate=True         # This is to generate a report on the conversion to C code
-	)
+	),
+    long_description=readme,
+    url='https://github.com/ArnauMiro/MEP.git',
+    packages=find_packages(exclude=('Examples', 'doc')),
+	install_requires=['numpy','matplotlib','cython']
 )

@@ -10,8 +10,8 @@ RungeKutta.html
 Examples/*.o
 bin/
 include/
-src/cpp/*.o
-src/c/*.o
+pyRKIntegrator/src/cpp/*.o
+pyRKIntegrator/src/c/*.o
 
 # C extensions
 *.so
