@@ -24,7 +24,7 @@ V0 = np.sqrt(G*M2/R0)
 T  = 2*np.pi / np.sqrt(G*M2/R0/R0/R0)
 
 # Define the function to integrate
-def TwoBody(t,var,n,varp2):
+def TwoBody(t,var,n,varp2,*args):
 	'''
 	Body 1: Perturbated
 		var[0] = rx   varp[0] = vx    varp2[0] = ax
