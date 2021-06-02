@@ -13,8 +13,7 @@ import sys, os, numpy as np
 from setuptools import setup, Extension, find_packages
 from Cython.Build import cythonize
 
-_USE_CPP      = True
-_USE_COMPILED = False
+_USE_CPP,_USE_COMPILED = True,True
 try:
 	_USE_CPP      = True if os.environ['USE_CPP']      == 'ON' else False
 	_USE_COMPILED = True if os.environ['USE_COMPILED'] == 'ON' else False
