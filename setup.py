@@ -13,9 +13,11 @@ import sys, os, numpy as np
 from setuptools import setup, Extension, find_packages
 from Cython.Build import cythonize
 
-_USE_CPP = True
+_USE_CPP      = True
+_USE_COMPILED = False
 try:
-	_USE_CPP = True if os.environ['USE_CPP'] == 'ON' else False
+	_USE_CPP      = True if os.environ['USE_CPP']      == 'ON' else False
+	_USE_COMPILED = True if os.environ['USE_COMPILED'] == 'ON' else False
 except:
 	pass
 	
@@ -36,13 +38,13 @@ RK_c   = Extension('pyRKIntegrator.RungeKutta',
 				   include_dirs = ['pyRKIntegrator/src/c',np.get_include()]
 				  )
 
+modules_list = [RK_cpp if _USE_CPP else RK_c] if _USE_COMPILED else []
+
 # Main setup
 setup(
 	name="pyRKIntegrator",
 	version="2.0.0",
-	ext_modules=cythonize([
-			RK_cpp if _USE_CPP else RK_c
-		],
+	ext_modules=cythonize(modules_list,
 		language_level = str(sys.version_info[0]), # This is to specify python 3 synthax
 		annotate=True         # This is to generate a report on the conversion to C code
 	),

@@ -23,6 +23,7 @@ VECTORIZATION  = ON
 OPENMP_PARALL  = OFF
 FORCE_GCC      = OFF
 DEBUGGING      = OFF
+USE_COMPILED   = ON
 USE_CPP        = ON
 
 # Paths to the installed binaries
@@ -202,7 +203,7 @@ includes:
 # Python
 #
 python: setup.py
-	@CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" USE_CPP="${USE_CPP}" ${PYTHON} $< build_ext --inplace
+	@CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" USE_CPP="${USE_CPP}" USE_COMPILED="${USE_COMPILED}" ${PYTHON} $< build_ext --inplace
 	@echo "Python programs deployed successfully"
 
 requirements: requirements.txt
