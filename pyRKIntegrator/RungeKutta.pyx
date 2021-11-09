@@ -1,4 +1,4 @@
-#!/bin/env cython
+#!/usr/bin/env cython
 '''
 	RUNGE-KUTTA Integration
 
