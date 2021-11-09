@@ -11,34 +11,13 @@
 # David de la Torre / Arnau Miro
 # November 2018
 
-# Optimization, host and CPU type
-#
-OPTL = 2
-HOST = Host
-TUNE = haswell
-
-# Options
-#
-VECTORIZATION  = ON
-OPENMP_PARALL  = OFF
-FORCE_GCC      = OFF
-DEBUGGING      = OFF
-USE_CPP        = ON
-
-# Paths to the installed binaries
-#
-INSTALL_PATH = $(shell pwd)
-BIN_PATH     = $(INSTALL_PATH)/bin
-LIBS_PATH    = $(INSTALL_PATH)/lib
-INC_PATH     = $(INSTALL_PATH)/include
-
+# Include user-defined build configuration file
+include options.cfg
 
 # Compilers
 #
 # Automatically detect if the intel compilers are installed and use
 # them, otherwise default to the GNU compilers
-PYTHON = python
-PIP    = pip
 ifeq ($(FORCE_GCC),ON) 
 	# Forcing the use of GCC
 	# C Compiler
@@ -120,11 +99,9 @@ CXXFLAGS += -std=c++11
 # Header includes
 CXXFLAGS += -I${INC_PATH}
 
-
 # Defines
 #
-DFLAGS =
-
+DFLAGS = -DNPY_NO_DEPRECATED_API
 
 # Paths to the various libraries to compile
 #
@@ -202,17 +179,17 @@ includes:
 # Python
 #
 python: setup.py
-	@CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" USE_CPP="${USE_CPP}" ${PYTHON} $< build_ext --inplace
+	@CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" LDSHARED="${CC} -shared" ${PYTHON} $< build_ext --inplace
 	@echo "Python programs deployed successfully"
 
 requirements: requirements.txt
 	@${PIP} install -r $<
 
 install: 
-	@${PIP} install .
+	@CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" LDSHARED="${CC} -shared" ${PIP} install .
 
 install_dev: 
-	@${PIP} install -e .
+	@CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" LDSHARED="${CC} -shared" ${PIP} install -e .
 
 # Generic object makers
 #
