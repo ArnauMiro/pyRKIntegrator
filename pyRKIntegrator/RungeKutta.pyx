@@ -48,6 +48,7 @@
 	Arnau Miro, Elena Terzic 2021
 	Last rev: 2021
 '''
+#cython: legacy_implicit_noexcept=True
 
 import numpy as np
 from . import RK_SCHEMES, RKN_SCHEMES
@@ -68,8 +69,8 @@ cdef extern from "RK.h":
 		double secfact
 		double secfact_max
 		double secfact_min
-		int    (*eventfcn)(double,double*,int,double*,int*) # Event function must return continue or stop
-		int    (*outputfcn)(double,double*,int)             # Output function must return continue or stop
+		int    (*eventfcn)(double,double*,int,double*,int*) noexcept # Event function must return continue or stop
+		int    (*outputfcn)(double,double*,int) noexcept             # Output function must return continue or stop
 	# Typedef for RK output
 	ctypedef struct RK_OUT:
 		int    retval
@@ -104,11 +105,11 @@ cdef np.ndarray[np.double_t,ndim=1] double1D_to_numpy(double *cdouble,int n):
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
 @cython.nonecheck(False)
-cdef np.ndarray[np.int_t,ndim=1] int1D_to_numpy(int *cint,int n):
+cdef np.ndarray[np.int32_t,ndim=1] int1D_to_numpy(int *cint,int n):
 	'''
 	Convert a 1D C integer pointer into a numpy array
 	'''
-	cdef np.ndarray[np.int_t,ndim=1] out = np.zeros((n,),np.int)
+	cdef np.ndarray[np.int32_t,ndim=1] out = np.zeros((n,),np.int32)
 	memcpy(&out[0],cint,n*sizeof(int))
 	return out
 
@@ -123,24 +124,24 @@ cdef np.ndarray[np.double_t,ndim=2] double2D_to_numpy(double *cdouble, int n, in
 	memcpy(&out[0,0],cdouble,n*m*sizeof(double))
 	return out
 
-cdef void odefun_wrapper(double t,double* y,int n,double* dydx):
+cdef void odefun_wrapper(double t,double* y,int n,double* dydx) noexcept:
 	global wrap_odefun
 	cdef np.ndarray[np.double_t,ndim=1] _y    = double1D_to_numpy(y,n)
 	cdef np.ndarray[np.double_t,ndim=1] _dydx = double1D_to_numpy(dydx,n)
 	wrap_odefun(t,_y,n,_dydx)
 	memcpy(dydx,&_dydx[0],n*sizeof(double))
 
-cdef int eventfun_wrapper(double t,double* y,int n,double* value,int* direction):
+cdef int eventfun_wrapper(double t,double* y,int n,double* value,int* direction) noexcept:
 	global wrap_eventfun
-	cdef np.ndarray[np.double_t,ndim=1] _y      = double1D_to_numpy(y,n)
-	cdef np.ndarray[np.double_t,ndim=1] _value  = double1D_to_numpy(value,1)
-	cdef np.ndarray[np.int_t,ndim=1] _direction = int1D_to_numpy(direction,1)
+	cdef np.ndarray[np.double_t,ndim=1] _y        = double1D_to_numpy(y,n)
+	cdef np.ndarray[np.double_t,ndim=1] _value    = double1D_to_numpy(value,1)
+	cdef np.ndarray[np.int32_t,ndim=1] _direction = int1D_to_numpy(direction,1)
 	cdef int retval = wrap_eventfun(t,_y,n,_value,_direction)
 	value[0]     = _value[0]
 	direction[0] = _direction[0]
 	return retval
 
-cdef int outputfun_wrapper(double t,double *y,int n):
+cdef int outputfun_wrapper(double t,double *y,int n) noexcept:
 	global wrap_outputfun
 	cdef np.ndarray[np.double_t,ndim=1] _y = double1D_to_numpy(y,n)
 	return wrap_outputfun(t,_y,n)
