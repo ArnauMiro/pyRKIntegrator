@@ -52,7 +52,7 @@ jobs:
       - name: Run examples
         run: for file in $(ls Examples/*.py); do python $file; done
 
-    build_intel_c:
+  build_intel_c:
     runs-on: ubuntu-20.04
     env:
       CC: mpiicc
