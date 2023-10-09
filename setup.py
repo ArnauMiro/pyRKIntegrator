@@ -104,7 +104,7 @@ modules_list = [RK_cpp if options['USE_CPP'] else RK_c] if options['USE_COMPILED
 ## Main setup
 setup(
 	name="pyRKIntegrator",
-	version="2.1.0",
+	version="2.2.0",
 	ext_modules=cythonize(modules_list,
 		language_level = str(sys.version_info[0]), # This is to specify python 3 synthax
 		annotate       = False                     # This is to generate a report on the conversion to C code

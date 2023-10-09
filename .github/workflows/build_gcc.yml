@@ -1,0 +1,78 @@
+name: Build and test GNU
+run-name: Building and testing pyRKIntegratior GCC on branch <${{ github.head_ref }}> to <${{ github.base_ref }}> by @${{ github.actor }}
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:    
+  build_gcc_cxx:
+    runs-on: ubuntu-20.04
+    env:
+      CC: mpicc
+      CXX: mpc++
+      FC: mpif90
+    steps:
+      - uses: actions/checkout@v3
+      # Setup MPI and Python for this job
+      - name: Setup MPI
+        uses: mpi4py/setup-mpi@v1
+        with:
+          mpi: openmpi
+      - name: Set up Python 3.8.5
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8.5
+      # Run pyLOM compilation and deployment
+      - name: Set up configuration
+        run: |
+          sed -i 's/FORCE_GCC      = OFF/FORCE_GCC      = ON/g' options.cfg
+      - name: Uninstall
+        run: make uninstall
+      - name: Set up dependencies
+        run: make requirements
+      - name: Build compiled code
+        run: make python
+      - name: Install
+        run: make install
+        # Run Examples
+      - name: Run examples
+        run: for file in $(ls Examples/*.py); do python $file; done
+  
+  build_gcc_c:
+    runs-on: ubuntu-20.04
+    env:
+      CC: mpicc
+      CXX: mpc++
+      FC: mpif90
+    steps:
+      - uses: actions/checkout@v3
+      # Setup MPI and Python for this job
+      - name: Setup MPI
+        uses: mpi4py/setup-mpi@v1
+        with:
+          mpi: openmpi
+      - name: Set up Python 3.8.5
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8.5
+      # Run compilation and deployment
+      - name: Set up configuration
+        run: |
+          sed -i 's/FORCE_GCC      = OFF/FORCE_GCC      = ON/g' options.cfg
+          sed -i 's/USE_CPP        = ON/USE_CPP        = OFF/g' options.cfg
+      - name: Set up dependencies
+        run: make requirements
+      - name: Build compiled code
+        run: make python
+      - name: Install
+        run: make install
+      # Run Examples
+      - name: Run examples
+        run: for file in $(ls Examples/*.py); do python $file; done

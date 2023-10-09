@@ -1,3 +1,7 @@
+[![Build status](https://github.com/ArnauMiro/pyRKIntegrator/actions/workflows/build_intel.yml/badge.svg)](https://github.com/ArnauMiro/pyRKIntegrator/actions)
+[![Build status](https://github.com/ArnauMiro/pyRKIntegrator/actions/workflows/build_gcc.yml/badge.svg)](https://github.com/ArnauMiro/pyRKIntegrator/actions)
+[![License](https://img.shields.io/badge/license-GPL3-orange)](https://opensource.org/license/gpl-3-0/)
+
 # Runge-Kutta and Runge-Kutta-Nystrom integrators
 
 This project contains a series of adaptive generic Runge-Kutta and Runge-Kutta-Nystrom integrators developed in C++, with a Python interface.
