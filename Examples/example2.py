@@ -111,4 +111,3 @@ ax2.set_xlabel('Time (sec)')
 ax2.set_ylabel('Altitude (m)')
 
 plt.show()
-print('End',flush=True)

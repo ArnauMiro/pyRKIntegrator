@@ -11,7 +11,7 @@ import pyRKIntegrator as rk
 
 from mpl_toolkits.mplot3d import Axes3D
 
-
+print('start',flush=True)
 # Parameters
 G  = 6.674e-11*1.e-9 # km3/kg s2
 M1 = 5.97219e24      # kg
