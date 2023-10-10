@@ -7,12 +7,9 @@
 # Last rev: 2020
 from __future__ import print_function
 
-import numpy as np
+import numpy as np, matplotlib.pyplot as plt
 import pyRKIntegrator as rk
 
-import matplotlib
-import matplotlib.pyplot as plt
-plt.style.use('ggplot')
 
 # Parameters
 g    = 9.81
@@ -113,4 +110,5 @@ ax2.plot(t,y[:,1],'k')
 ax2.set_xlabel('Time (sec)')
 ax2.set_ylabel('Altitude (m)')
 
-plt.savefig('example2.pdf',dpi=300)
+plt.show()
+print('End',flush=True)

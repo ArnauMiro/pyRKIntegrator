@@ -6,13 +6,11 @@
 # Last rev: 2020
 from __future__ import print_function
 
-import numpy as np
+import numpy as np, matplotlib.pyplot as plt
 import pyRKIntegrator as rk
 
-import matplotlib
-import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-plt.style.use('ggplot')
+
 
 # Parameters
 G  = 6.674e-11*1.e-9 # km3/kg s2
@@ -91,4 +89,4 @@ for scheme in rk.RK_SCHEMES[3:]: # Do not run the lower order schemes
 
 # Show the plot
 ax2.legend(loc='lower right',fontsize='x-small',ncol=3)
-plt.savefig('example3.pdf',dpi=300)
+plt.show()

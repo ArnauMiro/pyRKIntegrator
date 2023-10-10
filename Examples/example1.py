@@ -7,12 +7,9 @@
 # Last rev: 2021
 from __future__ import print_function, division
 
-import numpy as np
+import numpy as np, matplotlib.pyplot as plt
 import pyRKIntegrator as rk
 
-import matplotlib
-import matplotlib.pyplot as plt
-plt.style.use('ggplot')
 
 # Define the function to integrate
 def odefun(x,y,n,dydx,*args):
@@ -68,4 +65,4 @@ for scheme in rk.RK_SCHEMES:
 # Show the plot
 ax1.legend(loc='lower right',fontsize='x-small',ncol=3)
 ax2.legend(loc='lower right',fontsize='x-small',ncol=3)
-plt.savefig('example1.pdf',dpi=300)
+plt.show()
