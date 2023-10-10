@@ -113,4 +113,4 @@ ax2.plot(t,y[:,1],'k')
 ax2.set_xlabel('Time (sec)')
 ax2.set_ylabel('Altitude (m)')
 
-plt.show()
+plt.savefig('example2.pdf',dpi=300)

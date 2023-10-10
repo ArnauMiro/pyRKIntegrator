@@ -91,4 +91,4 @@ for scheme in rk.RK_SCHEMES[3:]: # Do not run the lower order schemes
 
 # Show the plot
 ax2.legend(loc='lower right',fontsize='x-small',ncol=3)
-plt.show()
+plt.savefig('example3.pdf',dpi=300)

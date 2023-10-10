@@ -84,4 +84,4 @@ for scheme in rk.RKN_SCHEMES:
 
 # Show the plot
 ax2.legend(loc='lower right',fontsize='x-small',ncol=3)
-plt.show()
+plt.savefig('example5.pdf',dpi=300)

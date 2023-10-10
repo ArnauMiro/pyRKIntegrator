@@ -68,4 +68,4 @@ for scheme in rk.RK_SCHEMES:
 # Show the plot
 ax1.legend(loc='lower right',fontsize='x-small',ncol=3)
 ax2.legend(loc='lower right',fontsize='x-small',ncol=3)
-plt.show()
+plt.savefig('example1.pdf',dpi=300)
