@@ -33,4 +33,9 @@ jobs:
         run: make install
         # Run Examples
       - name: Run examples
-        run: for file in $(ls Examples/*.py); do python $file; done
+        run: |
+          python Examples/example1.py
+          python Examples/example2.py
+          python Examples/example3.py
+          python Examples/example4.py
+          python Examples/example5.py
