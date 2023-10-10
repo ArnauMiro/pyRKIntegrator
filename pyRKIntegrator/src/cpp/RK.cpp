@@ -154,7 +154,7 @@ RK_OUT odeRK(const char *scheme, void (*odefun)(double,double*,int,double*),
 			rel_err = std::fmax(std::fabs(1.-ylow[kk]/yhigh[kk]),rel_err);
 			abs_err = std::fmax(std::fabs(yhigh[kk]-ylow[kk]),abs_err);
 		}
-		double error = std::fmin(rel_err,abs_err);
+		double error = (!std::isnan(rel_err)) ? std::fmin(rel_err,abs_err) : abs_err;
 
 		// Step size control
 		// Source: Ketcheson, David, and Umair bin Waheed. 

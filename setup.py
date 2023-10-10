@@ -39,9 +39,9 @@ FFLAGS   = ''
 DFLAGS   = ' -DNPY_NO_DEPRECATED_API'
 if CC == 'gcc':
 	# Using GCC as a compiler
-	CFLAGS   += ' -O0 -g -rdynamic -fPIC' if options['DEBUGGING'] else ' -O%s -ffast-math -fPIC' % options['OPTL']
-	CXXFLAGS += ' -O0 -g -rdynamic -fPIC' if options['DEBUGGING'] else ' -O%s -ffast-math -fPIC' % options['OPTL']
-	FFLAGS   += ' -O0 -g -rdynamic -fPIC' if options['DEBUGGING'] else ' -O%s -ffast-math -fPIC' % options['OPTL']
+	CFLAGS   += ' -O0 -g -rdynamic -fPIC' if options['DEBUGGING'] else ' -O%s -fPIC' % options['OPTL']
+	CXXFLAGS += ' -O0 -g -rdynamic -fPIC' if options['DEBUGGING'] else ' -O%s -fPIC' % options['OPTL']
+	FFLAGS   += ' -O0 -g -rdynamic -fPIC' if options['DEBUGGING'] else ' -O%s -fPIC' % options['OPTL']
 	# Vectorization flags
 	if options['VECTORIZATION']:
 		CFLAGS   += ' -march=native -ftree-vectorize'
