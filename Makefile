@@ -191,6 +191,10 @@ install:
 install_dev: 
 	@CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" LDSHARED="${CC} -shared" ${PIP} install -e .
 
+package-build:
+	@CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" LDSHARED="${CC} -shared" ${PYTHON} -m build
+
+
 # Generic object makers
 #
 %.o: %.c

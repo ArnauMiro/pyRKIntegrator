@@ -33,8 +33,6 @@ jobs:
       - name: Set up configuration
         run: |
           sed -i 's/FORCE_GCC      = OFF/FORCE_GCC      = ON/g' options.cfg
-      - name: Uninstall
-        run: make uninstall
       - name: Set up dependencies
         run: make requirements
       - name: Build compiled code

@@ -103,14 +103,18 @@ modules_list = [RK_cpp if options['USE_CPP'] else RK_c] if options['USE_COMPILED
 
 ## Main setup
 setup(
-	name="pyRKIntegrator",
-	version="2.2.0",
+	name               = 'pyRKIntegrator',
+	version            = '2.2.0',
+	author             = ['Arnau Miro','Manel Soria'],
+	author_email       = ['arnau.miro@upc.edu','manel.soria@upc.edu'],
+	maintainer         = 'Arnau Miro',
+	maintainer_email   = 'arnau.miro@upc.edu',
 	ext_modules=cythonize(modules_list,
 		language_level = str(sys.version_info[0]), # This is to specify python 3 synthax
 		annotate       = False                     # This is to generate a report on the conversion to C code
 	),
-    long_description=readme,
-    url='https://github.com/ArnauMiro/pyRKIntegrator.git',
-    packages=find_packages(exclude=('Examples', 'doc')),
-	install_requires=['numpy','matplotlib','cython']
+    long_description   = readme,
+    url                = 'https://github.com/ArnauMiro/pyRKIntegrator.git',
+    packages           = find_packages(exclude=('Examples', 'doc')),
+	install_requires   = ['numpy','matplotlib','cython']
 )

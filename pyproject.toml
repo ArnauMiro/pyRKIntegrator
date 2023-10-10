@@ -57,7 +57,7 @@ keywords = ["integrators", "Runge-Kutta", "Runge-Kutta-Nystrom"]
 # authored the project, and a valid email address corresponding to the name
 # listed.
 authors = [
-  {name = "Arnau Miro", email = "arnau.miro@upc.edu" },
+  {name = "Arnau Miro",  email = "arnau.miro@upc.edu"  },
   {name = "Manel Soria", email = "manel.soria@upc.edu" },
 ]
 

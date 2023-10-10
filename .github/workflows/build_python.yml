@@ -1,0 +1,36 @@
+name: Build and test Python
+run-name: Building and testing pyRKIntegratior Python on branch <${{ github.head_ref }}> to <${{ github.base_ref }}> by @${{ github.actor }}
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:    
+  build_python:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      # Setup MPI and Python for this job
+      - name: Set up Python 3.8.5
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8.5
+      # Run pyLOM compilation and deployment
+      - name: Set up configuration
+        run: |
+          sed -i 's/USE_COMPILED   = ON/USE_COMPILED   = OFF/g' options.cfg
+      - name: Set up dependencies
+        run: make requirements
+      - name: Build compiled code
+        run: make python
+      - name: Install
+        run: make install
+        # Run Examples
+      - name: Run examples
+        run: for file in $(ls Examples/*.py); do python $file; done

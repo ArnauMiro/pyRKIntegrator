@@ -1,0 +1,10 @@
+include options.cfg
+include Makefile
+include pyRKIntegrator/src/cpp/*.cpp
+include pyRKIntegrator/src/cpp/*.h
+include pyRKIntegrator/src/c/*.c
+include pyRKIntegrator/src/c/*.h
+include pyRKIntegrator/RungeKutta.pyx
+exclude pyRKIntegrator/RungeKutta.cpp
+exclude doc/*
+exclude Examples/*
