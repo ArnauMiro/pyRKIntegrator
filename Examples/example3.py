@@ -75,16 +75,13 @@ Ek0 = 0.5*V0*V0 + G*M1/R0
 # Loop all the schemes
 for scheme in rk.RK_SCHEMES[3:]: # Do not run the lower order schemes
 	print("scheme %s," % scheme,end=' ')
-	try:
-		# Launch the integrator
-		t,y,err = rk.odeRK(scheme,TwoBody,tspan,y0,odeset)
-		print("error = %.2e with %d steps" % (err,len(t)),flush=True)
-		# Plot results
-		ax1.plot(y[:,0],y[:,1],y[:,2],label=scheme)
-		Ek = 0.5*np.linalg.norm(y[:,3:5],axis=1)**2 + G*M1/np.linalg.norm(y[:,0:2],axis=1)
-		ax2.plot(t/3600/34,(Ek-Ek0)/Ek0,label=scheme)
-	except Exception as e:
-		print("%s" % e,flush=True)
+	# Launch the integrator
+	t,y,err = rk.odeRK(scheme,TwoBody,tspan,y0,odeset)
+	print("error = %.2e with %d steps" % (err,len(t)),flush=True)
+	# Plot results
+	ax1.plot(y[:,0],y[:,1],y[:,2],label=scheme)
+	Ek = 0.5*np.linalg.norm(y[:,3:5],axis=1)**2 + G*M1/np.linalg.norm(y[:,0:2],axis=1)
+	ax2.plot(t/3600/34,(Ek-Ek0)/Ek0,label=scheme)
 
 # Show the plot
 ax2.legend(loc='lower right',fontsize='x-small',ncol=3)
