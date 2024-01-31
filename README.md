@@ -2,6 +2,8 @@
 [![Build status](https://github.com/ArnauMiro/pyRKIntegrator/actions/workflows/build_gcc.yml/badge.svg)](https://github.com/ArnauMiro/pyRKIntegrator/actions)
 [![Build status](https://github.com/ArnauMiro/pyRKIntegrator/actions/workflows/build_intel.yml/badge.svg)](https://github.com/ArnauMiro/pyRKIntegrator/actions)
 [![License](https://img.shields.io/badge/license-GPL3-orange)](https://opensource.org/license/gpl-3-0/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10598094.svg)](https://doi.org/10.5281/zenodo.10598094)
+
 
 # Runge-Kutta and Runge-Kutta-Nystrom integrators
 
