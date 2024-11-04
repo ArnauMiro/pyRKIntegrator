@@ -79,7 +79,7 @@ os.environ['LDSHARED'] = CC + ' -shared'
 libraries     = ['m']
 
 # OSX needs to also link with python3.8 for reasons...
-if sys.platform == 'darwin': libraries += ['python3.8']
+if sys.platform == 'darwin': libraries += [f'python{sys.version_info[0]}.{sys.version_info[1]}']
 
 
 ## Modules
