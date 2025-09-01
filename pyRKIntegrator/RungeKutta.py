@@ -515,7 +515,7 @@ def odeRKN(scheme,fun,xspan,y0,dy0,params=odeset(),extra_vars=None):
 	if retval == -1:
 		raise ValueError('ERROR! Integration step required under minimum.')
 
-	return x[:n], y[:n,:], dy[:n,:], err
+	return x[:n+1], y[:n+1,:], dy[:n+1,:], err
 
 
 class RKMethod():
