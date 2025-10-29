@@ -13,14 +13,14 @@ defaults:
 
 jobs:    
   build_python:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
       # Setup MPI and Python for this job
-      - name: Set up Python 3.8.5
+      - name: Set up Python 3.11.11
         uses: actions/setup-python@v3
         with:
-          python-version: 3.8.5
+          python-version: 3.11.11
       # Run pyLOM compilation and deployment
       - name: Set up configuration
         run: |
