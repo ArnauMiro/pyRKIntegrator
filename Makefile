@@ -216,7 +216,7 @@ clean:
 	-@cd pyRKIntegrator; rm -f *.o $(wildcard **/*.o) $(wildcard **/*/*.o) $(wildcard **/*/*/*.o)
 	-@cd pyRKIntegrator; rm -f *.pyc $(wildcard **/*.pyc) $(wildcard **/*/*.pyc)
 	-@cd pyRKIntegrator; rm -f RungeKutta.c RungeKutta.cpp RungeKutta.html
-	-@rm -rf build __pycache__
+	-@rm -rf build pyRKIntegrator/__pycache__ __pycache__
 cleanall:  clean 
 	-@rm -rf $(wildcard $(INC_PATH)/*)
 	-@rm -rf $(wildcard $(LIBS_PATH)/*)
