@@ -13,6 +13,14 @@ import sys, os, numpy as np
 from setuptools import setup, Extension, find_packages
 from Cython.Build import cythonize
 
+
+## Read INIT file
+with open('pyRKIntegrator/__init__.py') as f:
+	for l in f.readlines():
+		if '__version__' in l:
+			__version__ = eval(l.split('=')[1].strip())
+
+
 with open('README.md') as f:
 	readme = f.read()
 
@@ -104,7 +112,7 @@ modules_list = [RK_cpp if options['USE_CPP'] else RK_c] if options['USE_COMPILED
 ## Main setup
 setup(
 	name               = 'pyRKIntegrator',
-	version            = '2.2.0',
+	version            = __version__,
 	author             = ['Arnau Miro','Manel Soria'],
 	author_email       = ['arnau.miro@upc.edu','manel.soria@upc.edu'],
 	maintainer         = 'Arnau Miro',
@@ -115,6 +123,6 @@ setup(
 	),
     long_description   = readme,
     url                = 'https://github.com/ArnauMiro/pyRKIntegrator.git',
-    packages           = find_packages(exclude=('Examples', 'doc')),
+    packages           = find_packages(exclude=('Examples','doc')),
 	install_requires   = ['numpy','matplotlib','cython']
 )

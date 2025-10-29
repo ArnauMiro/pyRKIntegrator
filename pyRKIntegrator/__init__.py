@@ -49,7 +49,7 @@
 	Last rev: 2021
 '''
 
-__VERSION__ = 3.0
+__version__ = "2.2.5"
 
 ## RUNGE-KUTTA SCHEMES ##
 RK_SCHEMES = ['eulerheun12',
